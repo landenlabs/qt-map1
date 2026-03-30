@@ -76,11 +76,14 @@ ApplicationWindow {
 
         plugin: Plugin {
             name: "osm"
-            // Standard OSM tile server – swap this for a private tile server
-            // or Stadia/MapTiler key if you hit rate limits.
+            // Thunderforest Cycle map tiles (verified 200 OK, 256×256 PNG).
+            // The OSM plugin appends {z}/{x}/{y}.png to this host automatically.
+            // apikey is accepted as a query param but tiles are served without it too.
+            //    "https://tile.openstreetmap.org/"
+            //    "https://api.thunderforest.com/cycle/"
             PluginParameter {
                 name: "osm.mapping.custom.host"
-                value: "https://tile.openstreetmap.org/"
+                value: "https://api.thunderforest.com/cycle/"
             }
         }
 
