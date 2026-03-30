@@ -17,7 +17,15 @@ Displays OpenStreetMap tiles with pan, zoom, and an optional floating-point grid
 
 ## Screenshots
 
-<!-- Add screenshots here -->
+![Default Open Street Map screen](screens/screen1.png)
+
+Test Grid as a grey scale image
+![Default Open Street Map screen](screens/test-grid.jpg)
+
+
+Test Grid rendered over map for every tile
+![Default Open Street Map screen](screens/grid-overlay1.png)
+
 
 ## Requirements
 
