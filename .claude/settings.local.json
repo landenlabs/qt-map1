@@ -18,7 +18,9 @@
       "Bash(find /opt/homebrew -name *.cpp -path *osm*)",
       "Bash(find /opt/homebrew -name *.json -path *osm*)",
       "Bash(find /opt/homebrew -name osm_mapping*)",
-      "WebFetch(domain:doc.qt.io)"
+      "WebFetch(domain:doc.qt.io)",
+      "Bash(find /opt/homebrew/Cellar/qtlocation -name *.h)",
+      "WebSearch"
     ]
   }
 }

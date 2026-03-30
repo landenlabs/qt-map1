@@ -1,8 +1,11 @@
-# C++ objects and libs
+# ==========================================
+# C++ / Compiler Artifacts
+# ==========================================
 *.slo
 *.lo
-*.d
 *.o
+*.obj
+*.d
 *.a
 *.la
 *.lai
@@ -10,13 +13,22 @@
 *.so.*
 *.dll
 *.dylib
+*.exe
+*.out
+*.app
+*.pdb
+*.ilk
+*.exp
+*.lib
 
-# Qt-es
+# ==========================================
+# Qt / QtCreator
+# ==========================================
 object_script.*.Release
 object_script.*.Debug
 *_plugin_import.cpp
-/.qmake.cache
-/.qmake.stash
+.qmake.cache
+.qmake.stash
 *.pro.user
 *.pro.user.*
 *.qbs.user
@@ -28,35 +40,59 @@ qrc_*.cpp
 ui_*.h
 *.qmlc
 *.jsc
-Makefile*
-*build-*
 *.qm
 *.prl
-
-# Qt unit tests
 target_wrapper.*
-
-# QtCreator
 *.autosave
-
-# QtCreator Qml
 *.qmlproject.user
 *.qmlproject.user.*
-
-# QtCreator CMake
-CMakeLists.txt.user*
-
-# QtCreator 4.8< compilation database
 compile_commands.json
-
-# QtCreator local machine specific files for imported projects
 *creator.user*
-
 *_qmlcache.qrc
 
-# Mac specific
-.DS_Store
+# ==========================================
+# CMake / Build Directories
+# ==========================================
+# Captures 'build', 'build-Desktop-Debug', 'out', etc.
+[Bb]uild*/
+[Oo]ut*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+CMakeLists.txt.user*
 
-# Build directories (Standard Qt Creator behavior)
-build-*/
+# ==========================================
+# Visual Studio Specific (Windows)
+# ==========================================
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
+*.db
+*.opendb
+*.VC.db
+*.VC.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.doccache
+# Visual Studio Image Library cache
+*.vshost.exe
+*.vshost.exe.config
+*.vshost.exe.manifest
+
+# ==========================================
+# OS Specific
+# ==========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==========================================
+# Local Secrets
+# ==========================================
+secrets.cmake
 

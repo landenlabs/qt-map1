@@ -76,14 +76,12 @@ ApplicationWindow {
 
         plugin: Plugin {
             name: "osm"
-            // Thunderforest Cycle map tiles (verified 200 OK, 256×256 PNG).
-            // The OSM plugin appends {z}/{x}/{y}.png to this host automatically.
-            // apikey is accepted as a query param but tiles are served without it too.
-            //    "https://tile.openstreetmap.org/"
-            //    "https://api.thunderforest.com/cycle/"
+            // Use a local providers repository so the OSM plugin fetches tiles from
+            // Thunderforest with the full URL template including the apikey query param.
+            // providers/cycle contains the JSON with UrlTemplate using %z/%x/%y placeholders.
             PluginParameter {
-                name: "osm.mapping.custom.host"
-                value: "https://api.thunderforest.com/cycle/"
+                name: "osm.mapping.providersrepository.address"
+                value: Qt.resolvedUrl("../providers/")
             }
         }
 
@@ -289,6 +287,30 @@ ApplicationWindow {
                     }
                 }
             }
+            Rectangle { width: parent.width; height: 1; color: "#cccccc" }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                font.pixelSize: 12
+                font.bold: true
+                text: "Tile Cache"
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                font.pixelSize: 12
+                color: "#444444"
+                text: "If old watermarked tiles appear after changing the tile provider, " +
+                      "clear the disk cache:"
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WrapAnywhere
+                font.pixelSize: 12
+                font.family: "monospace"
+                color: "#222222"
+                text: "~/Library/Caches/QtLocation/5.8/tiles/osm/"
+            }
         }
     }
 
@@ -304,6 +326,133 @@ ApplicationWindow {
             margins: 10
         }
         onClicked: aboutDialog.open()
+    }
+
+    // -----------------------------------------------------------------------
+    // Search bar – centred at the top
+    // -----------------------------------------------------------------------
+    Item {
+        id: searchBar
+        anchors {
+            top: parent.top
+            horizontalCenter: parent.horizontalCenter
+            topMargin: 10
+        }
+        width: Math.min(480, parent.width - 200)
+        height: 36
+
+        // State: "idle" | "searching" | "found" | "notfound" | "error"
+        property string searchState: "idle"
+        property string errorText: ""
+
+        function search(query) {
+            if (query.trim() === "") return
+            searchState = "searching"
+            errorText = ""
+
+            var xhr = new XMLHttpRequest()
+            var url = "https://nominatim.openstreetmap.org/search?q="
+                    + encodeURIComponent(query.trim())
+                    + "&format=json&limit=1"
+            xhr.open("GET", url)
+            xhr.setRequestHeader("User-Agent", "qt-map1/" + appVersion)
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState !== XMLHttpRequest.DONE) return
+                if (xhr.status !== 200) {
+                    searchState = "error"
+                    errorText = "Network error " + xhr.status
+                    return
+                }
+                var results = JSON.parse(xhr.responseText)
+                if (!results || results.length === 0) {
+                    searchState = "notfound"
+                    errorText = "Not found: " + query.trim()
+                    return
+                }
+                var lat = parseFloat(results[0].lat)
+                var lon = parseFloat(results[0].lon)
+                map.center = QtPositioning.coordinate(lat, lon)
+                map.zoomLevel = 12
+                searchState = "found"
+                searchField.text = results[0].display_name
+            }
+            xhr.send()
+        }
+
+        // ── Background ───────────────────────────────────────────────────────
+        Rectangle {
+            anchors.fill: parent
+            radius: 18
+            color: Qt.rgba(1, 1, 1, 0.92)
+            border.color: {
+                if (searchBar.searchState === "notfound" || searchBar.searchState === "error")
+                    return "#cc3333"
+                if (searchBar.searchState === "found")
+                    return "#2a9d2a"
+                if (searchField.activeFocus)
+                    return "#1a73e8"
+                return "#cccccc"
+            }
+            border.width: 1.5
+
+            layer.enabled: true
+            layer.effect: null  // shadow via drop shadow below
+        }
+
+        // ── Search icon ──────────────────────────────────────────────────────
+        Text {
+            id: searchIcon
+            anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
+            text: searchBar.searchState === "searching" ? "…" : "⌕"
+            font.pixelSize: 17
+            color: "#666666"
+        }
+
+        // ── Text input ───────────────────────────────────────────────────────
+        TextField {
+            id: searchField
+            anchors {
+                left: searchIcon.right; leftMargin: 6
+                right: clearBtn.left;   rightMargin: 4
+                verticalCenter: parent.verticalCenter
+            }
+            height: parent.height - 4
+            placeholderText: "Search city, state or city, country…"
+            font.pixelSize: 13
+            background: Item {}   // transparent – outer Rectangle provides the bg
+            verticalAlignment: TextInput.AlignVCenter
+            onAccepted: searchBar.search(text)
+
+            // Show error/notfound hint in placeholder style
+            Text {
+                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                visible: searchField.text === "" &&
+                         (searchBar.searchState === "notfound" ||
+                          searchBar.searchState === "error")
+                text: searchBar.errorText
+                font.pixelSize: 12
+                color: "#cc3333"
+            }
+        }
+
+        // ── Clear button ─────────────────────────────────────────────────────
+        Text {
+            id: clearBtn
+            anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+            text: "✕"
+            font.pixelSize: 13
+            color: "#888888"
+            visible: searchField.text !== ""
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    searchField.text = ""
+                    searchBar.searchState = "idle"
+                    searchField.forceActiveFocus()
+                }
+            }
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -335,15 +484,15 @@ ApplicationWindow {
     }
 
     // -----------------------------------------------------------------------
-    // Toolbar
+    // Zoom buttons – top-right corner
     // -----------------------------------------------------------------------
-    Row {
+    Column {
         anchors {
             top: parent.top
             right: parent.right
             margins: 10
         }
-        spacing: 6
+        spacing: 4
 
         RoundButton {
             text: "+"
@@ -355,30 +504,76 @@ ApplicationWindow {
             width: 36; height: 36
             onClicked: map.zoomLevel = Math.max(map.minimumZoomLevel, map.zoomLevel - 1)
         }
+    }
 
-        // Toggle tile boundary grid
-        Button {
-            id: tileGridBtn
-            text: "Grid"
-            height: 36
-            highlighted: tileGridCanvas.visible
-            onClicked: tileGridCanvas.visible = !tileGridCanvas.visible
+    // -----------------------------------------------------------------------
+    // Overlay toggle buttons – vertical strip along the right edge, below zoom
+    // -----------------------------------------------------------------------
+    Column {
+        id: overlayPanel
+        anchors {
+            top: parent.top
+            right: parent.right
+            topMargin: 10 + 36 + 4 + 36 + 12   // clear the two zoom buttons
+            rightMargin: 10
         }
+        spacing: 4
 
-        // Toggle the float-grid overlay on/off.
+        // ── Grid overlay (test grid / float shader) ──────────────────────────
         Button {
-            id: overlayBtn
-            text: overlay.visible ? "Hide overlay" : "Show overlay"
-            height: 36
+            id: gridOverlayBtn
+            width: 54; height: 36
+            text: "Grid"
+            highlighted: overlay.visible
             onClicked: {
                 if (!overlay.visible) {
-                    // Generate the test-grid image once (phase 1 ignores coordinates)
                     overlay.drawTile(0, 0, 0)
-                    // Position one quad per visible tile in the current viewport
                     updateOverlayTiles()
                 }
                 overlay.visible = !overlay.visible
             }
         }
+
+        // ── Dynamic layer buttons loaded from layers.json ────────────────────
+        Repeater {
+            model: overlayLayers   // QVariantList exposed by main.cpp
+
+            delegate: Button {
+                required property var modelData
+                required property int index
+
+                width: 54; height: 36
+                text: modelData.name
+
+                // Per-button toggle state (layer loading wired up in a future phase)
+                property bool layerActive: false
+                highlighted: layerActive
+
+                onClicked: {
+                    layerActive = !layerActive
+                    // TODO: enable/disable layer render using modelData.url
+                    console.log((layerActive ? "Enable" : "Disable")
+                                + " layer '" + modelData.name
+                                + "' url: " + modelData.url)
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Tile-boundary grid toggle – kept as a small labelled button bottom-right
+    // so it doesn't crowd the overlay strip
+    // -----------------------------------------------------------------------
+    Button {
+        anchors {
+            bottom: parent.bottom
+            right: parent.right
+            margins: 10
+        }
+        text: "Tile grid"
+        height: 30
+        font.pixelSize: 11
+        highlighted: tileGridCanvas.visible
+        onClicked: tileGridCanvas.visible = !tileGridCanvas.visible
     }
 }

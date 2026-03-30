@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="/qt/qml/MapApp">
-    <file alias="qmldir">/Users/dennislang/opt/projects/qt-projects/qt-map1/build/MapApp/qmldir</file>
-  </qresource>
-</RCC>
-

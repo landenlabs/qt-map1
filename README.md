@@ -92,6 +92,17 @@ OverlayItem {
 
 The fragment shader normalises raw float values from `[dataMin, dataMax]` to `[0, 1]` and maps them through a five-stop viridis colormap.
 
+## Tile Cache
+
+Qt Location caches downloaded map tiles to disk to avoid redundant network requests. If you change the tile provider and see old watermarked tiles, clear the cache:
+
+**macOS**
+```
+rm -rf ~/Library/Caches/QtLocation/5.8/tiles/osm/
+```
+
+The cache will be rebuilt automatically on next launch.
+
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.

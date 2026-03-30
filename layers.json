@@ -1,0 +1,20 @@
+[
+    {
+        "name": "Temp",
+        "url": "https://example.com/temperature/{z}/{x}/{y}.bin",
+        "urlpng": "https://api.weather.com/v3/TileServer/tile?product=tempFcst&apiKey={k}&xyz={x}:{y}:{z}&ts={t}",
+        "urltm": "https://api.weather.com/v3/TileServer/series/productSet?&productSet=atak&filter=tempFcst&apiKey={k}"
+    },
+    {
+        "name": "Wind",
+        "url": "https://example.com/wind/{z}/{x}/{y}.bin"
+    },
+    {
+        "name": "Rain",
+        "url": "https://example.com/precipitation/{z}/{x}/{y}.bin"
+    },
+    {
+        "name": "Humidity",
+        "url": "https://example.com/humidity/{z}/{x}/{y}.bin"
+    }
+]
