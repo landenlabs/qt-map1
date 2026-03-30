@@ -35,14 +35,19 @@ else()
         "secrets.cmake not found. "
         "Copy secrets.cmake.example to secrets.cmake and fill in your API keys.")
     set(TWC_API_KEY "")
+    set(SUN_API_KEY "")
 endif()
 
 qt_add_executable(qt-map1
     main.cpp
+    Logger.h
+    Logger.cpp
     OverlayItem.h
     OverlayItem.cpp
     FloatGridMaterial.h
     FloatGridMaterial.cpp
+    LayerManager.h
+    LayerManager.cpp
 )
 
 qt_add_qml_module(qt-map1
@@ -66,6 +71,7 @@ qt_add_shaders(qt-map1 "floatgrid_shaders"
 target_compile_definitions(qt-map1 PRIVATE
     PROJECT_VERSION="${PROJECT_VERSION}"
     TWC_API_KEY="${TWC_API_KEY}"
+    SUN_API_KEY="${SUN_API_KEY}"
     LAYERS_FILE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/layers.json"
 )
 
