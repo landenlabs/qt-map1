@@ -1,0 +1,100 @@
+    71	0:44	make -j10
+    72	0:45	./StockChart
+    73	0:45	make clean
+    74	0:45	make -j10
+    75	0:45	./StockChart
+    76	0:48	git status
+    77	0:48	git add .
+    78	0:48	status
+    79	0:49	git status
+    80	0:49	git-add-commit-push.csh "save attemp to fix star icon on mac, did not work"
+    81	0:49	git add -f .
+    82	0:50	git-add-commit-push.csh "save attemp to fix star icon on mac, did not work"
+    83	0:50	b ../.gitignore
+    84	0:51	cd ..
+    85	0:51	git add .
+    86	0:51	git status
+    87	0:51	git add .
+    88	0:51	git status
+    89	0:52	dir
+    90	0:52	cd build_exe
+    91	0:52	dir
+    92	0:52	dir
+    93	0:52	history
+    94	0:53	make -j10
+    95	0:53	./StockChart
+    96	0:55	dir
+    97	0:55	dir ..
+    98	0:55	find . -name \*png
+    99	0:55	dir ~/Downloads/
+   100	0:57	mv ~/Downloads/bg_graph bg_graph.jpg
+   101	0:57	mv bg_graph.jpg ..
+   102	0:57	dir ..
+   103	0:57	make -j10
+   104	0:58	./StockChart
+   105	0:58	dir ..
+   106	0:59	dir
+   107	1:00	cd ..
+   108	1:00	dir
+   109	1:00	cd build_exe
+   110	1:02	more ../how-to-make.txt
+   111	1:02	dir
+   112	1:03	rm -rf CMakeCache.txt CMakeFiles
+   113	1:03	cmake .. -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/qt -DBUILD_AS_BUNDLE=OFF
+   114	1:03	make -j10
+   115	1:03	./StockChart
+   116	8:26	git status
+   117	8:47	cmake .. -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/qt -DBUILD_AS_BUNDLE=OFF
+   118	8:47	dir
+   119	8:48	rm -rf cmake_install.cmake CMake* Makefile Stock*
+   120	8:48	dir
+   121	8:48	cmake .. -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/qt -DBUILD_AS_BUNDLE=OFF
+   122	8:48	make -j10
+   123	8:48	./StockChart
+   124	8:49	cmake --build . --clean-first
+   125	8:49	b ../how-to-make.txt
+   126	8:50	./StockChart
+   127	8:51	./StockChart
+   128	8:53	cmake --build .
+   129	8:53	cmake --build .
+   130	8:53	./StockChart
+   131	9:02	cmake --build .
+   132	9:02	./StockChart
+   133	9:06	cd ..
+   134	9:06	git status
+   135	9:06	git add .
+   136	9:06	git status
+   137	9:06	git-add-commit-push.csh "break into modules, add stacktrace report"
+   138	9:10	cd ..
+   139	9:10	dir
+   140	9:10	ls -alrt
+   141	9:10	cd qt-map1/
+   142	9:10	dir
+   143	9:11	cd build/
+   144	9:11	dir
+   145	9:11	./qt-map1
+   146	9:12	cmake --build . -j10
+   147	9:12	./qt-map1
+   148	9:14	find /opt/homebrew -name "plugins.qmltypes" -path "*/Location*" 2 > /dev/null | head -5 ; find /opt/homebrew -name "*.qmltypes" -path "*Location*"
+   149	9:14	find /opt/homebrew -name "plugins.qmltypes" -path "*/Location*"
+   150	9:14	find /opt/homebrew -name "plugins.qmltypes"
+   151	9:14	find /opt/homebrew -name "plugins.qmltypes" | grep -i location
+   152	9:16	cmake --build . -j10
+   153	9:16	./qt-map1
+   154	9:33	cmake --build . -j10
+   155	9:33	./qt-map1
+   156	9:42	cmake --build . -j10
+   157	9:42	./qt-map1
+   158	9:55	cmake --build . -j10
+   159	9:55	./qt-map1
+   160	11:02	dor
+   161	11:02	dir
+   162	11:17	cd ..
+   163	11:17	dir
+   164	11:18	vc .
+   165	11:31	bg
+   166	11:31	dir
+   167	11:31	cd build/
+   168	11:31	dir
+   169	11:31	history
+   170	11:31	history > ../how-to-make.txt

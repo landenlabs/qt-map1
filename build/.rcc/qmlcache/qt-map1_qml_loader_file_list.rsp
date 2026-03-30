@@ -1,0 +1,7 @@
+--resource
+/Users/dennislang/opt/projects/qt-projects/qt-map1/build/.qt/rcc/qmake_MapApp.qrc
+--resource
+/Users/dennislang/opt/projects/qt-projects/qt-map1/build/.qt/rcc/qt-map1_raw_qml_0.qrc
+--resource
+/Users/dennislang/opt/projects/qt-projects/qt-map1/build/.qt/rcc/floatgrid_shaders.qrc
+/qt/qml/MapApp/main.qml

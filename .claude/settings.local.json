@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(qt-cmake --version)",
+      "Bash(cmake --version)",
+      "Read(//opt/homebrew/opt/**)",
+      "Read(//opt/homebrew/**)",
+      "Bash(qmake6 --version)",
+      "Bash(qmake6:*)",
+      "Bash(mkdir -p build)",
+      "Bash(cmake .. -DCMAKE_PREFIX_PATH=/opt/homebrew -DCMAKE_BUILD_TYPE=Debug)",
+      "Bash(find /opt/homebrew/share/qt -name *.qml -path */Location/*)",
+      "Bash(qsb --help)",
+      "Bash(qsb --dump build/.qsb/shaders/floatgrid.vert.qsb)",
+      "Bash(qsb --dump /Users/dennislang/opt/projects/qt-projects/qt-map1/build/.qsb/shaders/floatgrid.vert.qsb)",
+      "Bash(qsb:*)"
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+module MapApp
+typeinfo qt-map1.qmltypes
+prefer :/qt/qml/MapApp/
+depends QtQuick
+
