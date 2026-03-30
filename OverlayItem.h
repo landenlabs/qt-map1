@@ -3,24 +3,20 @@
 #include <QImage>
 #include <QNetworkAccessManager>
 #include <QQuickItem>
-#include <vector>
+#include <QRectF>
+#include <QVector>
+#include <QVariantList>
 
-// OverlayItem – a transparent QQuickItem that sits on top of a QtLocation Map
-// and renders per-tile floating-point data grids with an OpenGL/RHI fragment
-// shader (viridis colormap).
+// OverlayItem – a transparent QQuickItem that renders per-tile floating-point
+// data grids with an OpenGL/RHI fragment shader (viridis colormap).
 //
-// Phase 1 (current): drawTile() always renders a static sine/Gaussian test
-//   grid so the shader pipeline can be verified.
-// Phase 2: drawTile() will fetch a float32 binary tile from `endpoint`, decode
-//   it, and replace the test grid with real data.
+// Rendering is driven by two independent inputs:
+//   1. drawTile()       — supplies the float-data image (test grid or fetched tile)
+//   2. setVisibleTiles()— supplies the screen-space rect for every visible tile
 //
-// QML usage (import MapApp 1.0):
-//   OverlayItem {
-//       anchors.fill: map
-//       mapItem: map
-//       dataMin: 0.0; dataMax: 1.0
-//       opacity: 0.75
-//   }
+// QML calls setVisibleTiles() on every pan/zoom so the quads stay aligned with
+// the underlying OSM tiles.  One QSGGeometryNode is created per visible tile;
+// all nodes share a single QSGTexture held in the root TileGridRootNode.
 
 class OverlayItem : public QQuickItem
 {
@@ -40,12 +36,13 @@ public:
     float    dataMin()  const;  void setDataMin(float v);
     float    dataMax()  const;  void setDataMax(float v);
 
-    // Render a tile identified by Web-Mercator tile coordinates.
-    //   z – zoom level
-    //   x – tile column
-    //   y – tile row
-    // Phase 1: ignores coordinates, renders the static test grid.
+    // Generate the float-data image for one tile (phase 1: static test grid).
     Q_INVOKABLE void drawTile(int z, int x, int y);
+
+    // Pass the screen-space rects for every currently-visible tile.
+    // Called from QML after each pan/zoom using map.fromCoordinate() results.
+    // Each QVariant must be a QRectF (i.e. Qt.rect(...) from QML).
+    Q_INVOKABLE void setVisibleTiles(const QVariantList &rects);
 
 signals:
     void mapItemChanged();
@@ -62,8 +59,6 @@ private slots:
     void onMapViewportChanged();
 
 private:
-    // Builds a static 256×256 float grid with a sine-wave background and a
-    // central Gaussian peak. Returns a Grayscale8 QImage (values in [0, 1]).
     static QImage makeTestGrid(int w, int h);
 
     QObject *m_mapItem  = nullptr;
@@ -71,10 +66,11 @@ private:
     float    m_dataMin  = 0.0f;
     float    m_dataMax  = 1.0f;
 
-    // Written on the GUI thread inside drawTile(); consumed on the render thread
-    // inside updatePaintNode() while the GUI thread is blocked (Qt SG sync).
-    QImage m_pendingImage;
-    bool   m_dirty = false;
+    // GUI-thread state handed to the render thread during SG sync
+    QImage          m_pendingImage;   // new image to upload → texture
+    QVector<QRectF> m_tileRects;      // current visible tile screen rects
+    bool            m_imageDirty = false;  // new image pending
+    bool            m_rectsDirty = false;  // tile positions changed
 
     QNetworkAccessManager m_network;
 };

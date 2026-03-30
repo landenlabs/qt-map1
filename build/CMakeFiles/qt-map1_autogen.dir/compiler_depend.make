@@ -766,12 +766,15 @@ qt-map1_autogen/timestamp: /Applications/Xcode.app/Contents/Developer/Platforms/
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QMetaType \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QObject \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QRect \
+  /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QRectF \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QSharedDataPointer \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QSize \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QSizeF \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QString \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QUrl \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVariant \
+  /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVariantList \
+  /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVector \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/q17memory.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/q20bit.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/q20functional.h \
@@ -918,7 +921,9 @@ qt-map1_autogen/timestamp: /Applications/Xcode.app/Contents/Developer/Platforms/
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qurl.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qutf8stringview.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvariant.h \
+  /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvariantlist.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvarlengtharray.h \
+  /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvector.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qversionnumber.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qversiontagging.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qxptype_traits.h \
@@ -2720,6 +2725,12 @@ qt-map1_autogen/timestamp: /Applications/Xcode.app/Contents/Developer/Platforms/
 
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquickcontrols2basicstyleimplpluginTargets.cmake:
 
+/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginTargetsPrecheck.cmake:
+
+/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginTargets.cmake:
+
+/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginTargets-release.cmake:
+
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtvkbpluginspluginTargets.cmake:
 
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginAdditionalTargetInfo.cmake:
@@ -3338,8 +3349,6 @@ CMakeFiles/4.3.0/CMakeSystem.cmake:
 
 /opt/homebrew/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargetsPrecheck.cmake:
 
-/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginTargets-release.cmake:
-
 /opt/homebrew/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargets.cmake:
 
 /opt/homebrew/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginConfig.cmake:
@@ -3620,8 +3629,6 @@ qt-map1_autogen/moc_predefs.h:
 
 /opt/homebrew/lib/cmake/Qt6/QtPublicSbomGenerationCycloneDXHelpers.cmake:
 
-/opt/homebrew/lib/cmake/Qt6/QtPublicSbomFileHelpers.cmake:
-
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6LabsStyleKitImplpluginConfig.cmake:
 
 /opt/homebrew/lib/cmake/Qt6/QtPublicSbomDocumentNamespaceHelpers.cmake:
@@ -3673,8 +3680,6 @@ qt-map1_autogen/moc_predefs.h:
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/count_if.h:
 
 /opt/homebrew/lib/cmake/Qt6/QtFeatureCommon.cmake:
-
-/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginTargetsPrecheck.cmake:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/endian.h:
 
@@ -3861,6 +3866,8 @@ qt-map1_autogen/moc_predefs.h:
 /opt/homebrew/lib/cmake/Qt6QmlMeta/Qt6QmlMetaConfigVersionImpl.cmake:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qversionnumber.h:
+
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvector.h:
 
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6QmlNetworkpluginTargets-release.cmake:
 
@@ -4078,6 +4085,8 @@ qt-map1_autogen/moc_predefs.h:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qcoreapplication.h:
 
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QRectF:
+
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h:
 
 /opt/homebrew/lib/cmake/Qt6Core/Qt6QDarwinMicrophonePermissionPluginAdditionalTargetInfo.cmake:
@@ -4115,10 +4124,6 @@ qt-map1_autogen/moc_predefs.h:
 /opt/homebrew/lib/cmake/Qt6/QtPublicSbomOpsHelpers.cmake:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qcalendar.h:
-
-/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__numeric/gcd_lcm.h:
-
-/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qbytearraylist.h:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qbytearrayalgorithms.h:
 
@@ -4159,6 +4164,8 @@ qt-map1_autogen/moc_predefs.h:
 /opt/homebrew/lib/cmake/Qt6Positioning/Qt6PositioningAdditionalTargetInfo.cmake:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/q17memory.h:
+
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVector:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVariant:
 
@@ -5118,8 +5125,6 @@ CMakeFiles/4.3.0/CMakeCXXCompiler.cmake:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__concepts/derived_from.h:
 
-/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginTargets.cmake:
-
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__numeric/reduce.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__locale_dir/wbuffer_convert.h:
@@ -5826,6 +5831,8 @@ CMakeFiles/4.3.0/CMakeCXXCompiler.cmake:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__concepts/invocable.h:
 
+/opt/homebrew/lib/cmake/Qt6/QtPublicSbomFileHelpers.cmake:
+
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/lexicographical_compare_three_way.h:
 
 /opt/homebrew/lib/cmake/Qt6Core/Qt6QDarwinLocationPermissionPluginTargets.cmake:
@@ -5863,6 +5870,8 @@ CMakeFiles/4.3.0/CMakeCXXCompiler.cmake:
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qbasicatomic.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__bit/popcount.h:
+
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvariantlist.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_fd_zero.h:
 
@@ -5929,6 +5938,8 @@ CMakeFiles/4.3.0/CMakeCXXCompiler.cmake:
 /opt/homebrew/lib/cmake/Qt6Location/Qt6LocationTargets.cmake:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/__xlocale.h:
+
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVariantList:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__fwd/set.h:
 
@@ -6121,6 +6132,10 @@ CMakeFiles/4.3.0/CMakeCXXCompiler.cmake:
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtvkbstylespluginConfig.cmake:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_pthread/_pthread_key_t.h:
+
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qbytearraylist.h:
+
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__numeric/gcd_lcm.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/comp.h:
 

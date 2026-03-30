@@ -1064,6 +1064,11 @@ CMakeFiles/qt-map1.dir/qt-map1_autogen/mocs_compilation.cpp.o: \
   /opt/homebrew/lib/QtCore.framework/Headers/qendian.h \
   /opt/homebrew/lib/QtGui.framework/Headers/qaccessible.h \
   /opt/homebrew/lib/QtGui.framework/Headers/qaccessible_base.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/QRectF \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVector \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvector.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVariantList \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvariantlist.h \
   /opt/homebrew/lib/QtNetwork.framework/Headers/QSslError \
   /opt/homebrew/lib/QtCore.framework/Headers/qtmochelpers.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qtmocconstants.h \

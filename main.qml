@@ -12,6 +12,62 @@ ApplicationWindow {
     title: "Qt Map Viewer  v" + appVersion
 
     // -----------------------------------------------------------------------
+    // Shared helpers
+    // -----------------------------------------------------------------------
+
+    // Web Mercator: tile row index → latitude (degrees)
+    function tileToLat(ty, z) {
+        return Math.atan(Math.sinh(Math.PI * (1.0 - 2.0 * ty / Math.pow(2, z))))
+               * 180.0 / Math.PI
+    }
+
+    // Compute screen-space QRectF for every tile visible at the current viewport
+    // and hand them to the C++ overlay so it can position one quad per tile.
+    function updateOverlayTiles() {
+        var z = Math.round(map.zoomLevel)
+        var n = Math.pow(2, z)
+
+        var nw = map.toCoordinate(Qt.point(0,         0),          false)
+        var se = map.toCoordinate(Qt.point(map.width, map.height), false)
+        if (!nw.isValid || !se.isValid) return
+
+        var txMin = Math.max(0,     Math.floor((nw.longitude + 180.0) / 360.0 * n))
+        var txMax = Math.min(n - 1, Math.floor((se.longitude + 180.0) / 360.0 * n))
+        var tyMin = Math.max(0,     Math.floor((1.0 - Math.log(Math.tan(nw.latitude * Math.PI / 180.0)
+                            + 1.0 / Math.cos(nw.latitude * Math.PI / 180.0)) / Math.PI) / 2.0 * n))
+        var tyMax = Math.min(n - 1, Math.floor((1.0 - Math.log(Math.tan(se.latitude * Math.PI / 180.0)
+                            + 1.0 / Math.cos(se.latitude * Math.PI / 180.0)) / Math.PI) / 2.0 * n))
+
+        var rects = []
+        for (var tx = txMin; tx <= txMax; tx++) {
+            for (var ty = tyMin; ty <= tyMax; ty++) {
+                var lonL = tx       / n * 360.0 - 180.0
+                var lonR = (tx + 1) / n * 360.0 - 180.0
+                var latT = tileToLat(ty,     z)
+                var latB = tileToLat(ty + 1, z)
+
+                var ptTL = map.fromCoordinate(QtPositioning.coordinate(latT, lonL), false)
+                var ptBR = map.fromCoordinate(QtPositioning.coordinate(latB, lonR), false)
+
+                // Only render overlay on tiles where (x + y) is even (checkerboard)
+                if ((tx + ty) % 2 === 0)
+                    rects.push(Qt.rect(ptTL.x, ptTL.y,
+                                       ptBR.x - ptTL.x, ptBR.y - ptTL.y))
+            }
+        }
+        overlay.setVisibleTiles(rects)
+    }
+
+    // -----------------------------------------------------------------------
+    // Respond to map viewport changes while overlay is active
+    // -----------------------------------------------------------------------
+    Connections {
+        target: map
+        function onCenterChanged()    { if (overlay.visible) updateOverlayTiles() }
+        function onZoomLevelChanged() { if (overlay.visible) updateOverlayTiles() }
+    }
+
+    // -----------------------------------------------------------------------
     // Map
     // -----------------------------------------------------------------------
     Map {
@@ -69,6 +125,98 @@ ApplicationWindow {
                 map.zoomLevel = Math.max(map.minimumZoomLevel,
                                           Math.min(map.maximumZoomLevel,
                                                    baseZoom + Math.log2(activeScale)))
+            }
+        }
+
+        // -----------------------------------------------------------------------
+        // Tile boundary grid
+        // -----------------------------------------------------------------------
+        Canvas {
+            id: tileGridCanvas
+            anchors.fill: parent
+            visible: false
+
+
+
+            // Repaint whenever the viewport moves or zoom changes
+            Connections {
+                target: map
+                function onCenterChanged()    { if (tileGridCanvas.visible) tileGridCanvas.requestPaint() }
+                function onZoomLevelChanged() { if (tileGridCanvas.visible) tileGridCanvas.requestPaint() }
+            }
+            onVisibleChanged: if (visible) requestPaint()
+
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
+
+                var z = Math.round(map.zoomLevel)
+                var n = Math.pow(2, z)
+
+                // Map corners in geographic coordinates
+                var nw = map.toCoordinate(Qt.point(0, 0),            false)
+                var se = map.toCoordinate(Qt.point(width, height),   false)
+                if (!nw.isValid || !se.isValid) return
+
+                // Tile index range visible on screen (add 1-tile margin)
+                var txMin = Math.max(0,     Math.floor((nw.longitude + 180.0) / 360.0 * n) - 1)
+                var txMax = Math.min(n - 1, Math.floor((se.longitude + 180.0) / 360.0 * n) + 1)
+                var tyMin = Math.max(0,     Math.floor((1.0 - Math.log(Math.tan(nw.latitude * Math.PI / 180.0)
+                                + 1.0 / Math.cos(nw.latitude * Math.PI / 180.0)) / Math.PI) / 2.0 * n) - 1)
+                var tyMax = Math.min(n - 1, Math.floor((1.0 - Math.log(Math.tan(se.latitude * Math.PI / 180.0)
+                                + 1.0 / Math.cos(se.latitude * Math.PI / 180.0)) / Math.PI) / 2.0 * n) + 1)
+
+                // ── Grid lines ────────────────────────────────────────────────
+                ctx.strokeStyle = "rgba(220, 30, 30, 0.85)"
+                ctx.lineWidth   = 1.0
+                ctx.setLineDash([])
+
+                // Vertical lines — one per tile column boundary
+                for (var tx = txMin; tx <= txMax + 1; tx++) {
+                    var lon = tx / n * 360.0 - 180.0
+                    var top    = map.fromCoordinate(QtPositioning.coordinate( 85.0, lon), false)
+                    var bottom = map.fromCoordinate(QtPositioning.coordinate(-85.0, lon), false)
+                    ctx.beginPath()
+                    ctx.moveTo(top.x,    0)
+                    ctx.lineTo(bottom.x, height)
+                    ctx.stroke()
+                }
+
+                // Horizontal lines — one per tile row boundary
+                for (var ty = tyMin; ty <= tyMax + 1; ty++) {
+                    var lat  = root.tileToLat(ty, z)
+                    var left  = map.fromCoordinate(QtPositioning.coordinate(lat, -180.0), false)
+                    var right = map.fromCoordinate(QtPositioning.coordinate(lat,  180.0), false)
+                    ctx.beginPath()
+                    ctx.moveTo(0,     left.y)
+                    ctx.lineTo(width, right.y)
+                    ctx.stroke()
+                }
+
+                // ── Tile labels (z/x/y) ───────────────────────────────────────
+                ctx.font      = "bold 11px monospace"
+                ctx.fillStyle = "rgba(220, 30, 30, 0.95)"
+                ctx.shadowColor   = "rgba(0,0,0,0.7)"
+                ctx.shadowBlur    = 3
+                ctx.shadowOffsetX = 0
+                ctx.shadowOffsetY = 0
+
+                for (var lx = txMin; lx <= txMax; lx++) {
+                    for (var ly = tyMin; ly <= tyMax; ly++) {
+                        var lonA = lx / n * 360.0 - 180.0
+                        var lonB = (lx + 1) / n * 360.0 - 180.0
+                        var latA = root.tileToLat(ly,     z)
+                        var latB = root.tileToLat(ly + 1, z)
+                        var cPt  = map.fromCoordinate(
+                                       QtPositioning.coordinate((latA + latB) * 0.5,
+                                                                (lonA + lonB) * 0.5), false)
+                        if (cPt.x > 0 && cPt.x < width && cPt.y > 0 && cPt.y < height) {
+                            var label = z + "/" + lx + "/" + ly
+                            var tw    = ctx.measureText(label).width
+                            ctx.fillText(label, cPt.x - tw * 0.5, cPt.y + 5)
+                        }
+                    }
+                }
             }
         }
 
@@ -205,28 +353,26 @@ ApplicationWindow {
             onClicked: map.zoomLevel = Math.max(map.minimumZoomLevel, map.zoomLevel - 1)
         }
 
+        // Toggle tile boundary grid
+        Button {
+            id: tileGridBtn
+            text: "Grid"
+            height: 36
+            highlighted: tileGridCanvas.visible
+            onClicked: tileGridCanvas.visible = !tileGridCanvas.visible
+        }
+
         // Toggle the float-grid overlay on/off.
-        // On first show, drawTile() generates the static test grid so the
-        // shader renders immediately without needing a real endpoint.
         Button {
             id: overlayBtn
             text: overlay.visible ? "Hide overlay" : "Show overlay"
             height: 36
             onClicked: {
                 if (!overlay.visible) {
-                    // Trigger the test-grid render for the current centre tile
-                    const z = Math.round(map.zoomLevel)
-                    // Convert centre coordinate to tile x/y at zoom z
-                    const lat = map.center.latitude
-                    const lon = map.center.longitude
-                    const n   = Math.pow(2, z)
-                    const tx  = Math.floor((lon + 180.0) / 360.0 * n)
-                    const ty  = Math.floor(
-                        (1.0 - Math.log(
-                            Math.tan(lat * Math.PI / 180.0) +
-                            1.0 / Math.cos(lat * Math.PI / 180.0)) / Math.PI)
-                        / 2.0 * n)
-                    overlay.drawTile(z, tx, ty)
+                    // Generate the test-grid image once (phase 1 ignores coordinates)
+                    overlay.drawTile(0, 0, 0)
+                    // Position one quad per visible tile in the current viewport
+                    updateOverlayTiles()
                 }
                 overlay.visible = !overlay.visible
             }

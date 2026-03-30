@@ -1063,6 +1063,11 @@ CMakeFiles/qt-map1.dir/OverlayItem.cpp.o: \
   /opt/homebrew/lib/QtCore.framework/Headers/qendian.h \
   /opt/homebrew/lib/QtGui.framework/Headers/qaccessible.h \
   /opt/homebrew/lib/QtGui.framework/Headers/qaccessible_base.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/QRectF \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVector \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvector.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVariantList \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvariantlist.h \
   /Users/dennislang/opt/projects/qt-projects/qt-map1/FloatGridMaterial.h \
   /opt/homebrew/lib/QtQuick.framework/Headers/QSGMaterial \
   /opt/homebrew/lib/QtQuick.framework/Headers/qsgmaterial.h \
@@ -1077,7 +1082,6 @@ CMakeFiles/qt-map1.dir/OverlayItem.cpp.o: \
   /opt/homebrew/lib/QtQuick.framework/Headers/qsgrendererinterface.h \
   /opt/homebrew/lib/QtQuick.framework/Headers/qsgnode.h \
   /opt/homebrew/lib/QtQuick.framework/Headers/qsggeometry.h \
-  /opt/homebrew/lib/QtCore.framework/Headers/QRectF \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/float.h \
   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21/include/float.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/float.h \

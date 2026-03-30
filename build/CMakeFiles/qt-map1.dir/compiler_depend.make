@@ -770,12 +770,15 @@ qt-map1_autogen/timestamp: /Applications/Xcode.app/Contents/Developer/Platforms/
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QMetaType \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QObject \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QRect \
+  /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QRectF \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QSharedDataPointer \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QSize \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QSizeF \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QString \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QUrl \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVariant \
+  /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVariantList \
+  /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVector \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/q17memory.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/q20bit.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/q20functional.h \
@@ -922,7 +925,9 @@ qt-map1_autogen/timestamp: /Applications/Xcode.app/Contents/Developer/Platforms/
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qurl.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qutf8stringview.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvariant.h \
+  /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvariantlist.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvarlengtharray.h \
+  /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvector.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qversionnumber.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qversiontagging.h \
   /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qxptype_traits.h \
@@ -4060,6 +4065,8 @@ CMakeFiles/qt-map1.dir/OverlayItem.cpp.o: /Users/dennislang/opt/projects/qt-proj
   /opt/homebrew/lib/QtCore.framework/Headers/QString \
   /opt/homebrew/lib/QtCore.framework/Headers/QUrl \
   /opt/homebrew/lib/QtCore.framework/Headers/QVariant \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVariantList \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVector \
   /opt/homebrew/lib/QtCore.framework/Headers/q17memory.h \
   /opt/homebrew/lib/QtCore.framework/Headers/q20bit.h \
   /opt/homebrew/lib/QtCore.framework/Headers/q20functional.h \
@@ -4206,7 +4213,9 @@ CMakeFiles/qt-map1.dir/OverlayItem.cpp.o: /Users/dennislang/opt/projects/qt-proj
   /opt/homebrew/lib/QtCore.framework/Headers/qurl.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qutf8stringview.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qvariant.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvariantlist.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qvarlengtharray.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvector.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qversionnumber.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qversiontagging.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qxptype_traits.h \
@@ -7199,12 +7208,15 @@ CMakeFiles/qt-map1.dir/main.cpp.o: /Users/dennislang/opt/projects/qt-projects/qt
   /opt/homebrew/lib/QtCore.framework/Headers/QMetaType \
   /opt/homebrew/lib/QtCore.framework/Headers/QObject \
   /opt/homebrew/lib/QtCore.framework/Headers/QRect \
+  /opt/homebrew/lib/QtCore.framework/Headers/QRectF \
   /opt/homebrew/lib/QtCore.framework/Headers/QSharedDataPointer \
   /opt/homebrew/lib/QtCore.framework/Headers/QSize \
   /opt/homebrew/lib/QtCore.framework/Headers/QSizeF \
   /opt/homebrew/lib/QtCore.framework/Headers/QString \
   /opt/homebrew/lib/QtCore.framework/Headers/QUrl \
   /opt/homebrew/lib/QtCore.framework/Headers/QVariant \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVariantList \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVector \
   /opt/homebrew/lib/QtCore.framework/Headers/q17memory.h \
   /opt/homebrew/lib/QtCore.framework/Headers/q20bit.h \
   /opt/homebrew/lib/QtCore.framework/Headers/q20functional.h \
@@ -7352,7 +7364,9 @@ CMakeFiles/qt-map1.dir/main.cpp.o: /Users/dennislang/opt/projects/qt-projects/qt
   /opt/homebrew/lib/QtCore.framework/Headers/qurl.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qutf8stringview.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qvariant.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvariantlist.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qvarlengtharray.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvector.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qversionnumber.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qversiontagging.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qxptype_traits.h \
@@ -8276,12 +8290,15 @@ CMakeFiles/qt-map1.dir/qt-map1_autogen/mocs_compilation.cpp.o: qt-map1_autogen/m
   /opt/homebrew/lib/QtCore.framework/Headers/QMetaType \
   /opt/homebrew/lib/QtCore.framework/Headers/QObject \
   /opt/homebrew/lib/QtCore.framework/Headers/QRect \
+  /opt/homebrew/lib/QtCore.framework/Headers/QRectF \
   /opt/homebrew/lib/QtCore.framework/Headers/QSharedDataPointer \
   /opt/homebrew/lib/QtCore.framework/Headers/QSize \
   /opt/homebrew/lib/QtCore.framework/Headers/QSizeF \
   /opt/homebrew/lib/QtCore.framework/Headers/QString \
   /opt/homebrew/lib/QtCore.framework/Headers/QUrl \
   /opt/homebrew/lib/QtCore.framework/Headers/QVariant \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVariantList \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVector \
   /opt/homebrew/lib/QtCore.framework/Headers/q17memory.h \
   /opt/homebrew/lib/QtCore.framework/Headers/q20algorithm.h \
   /opt/homebrew/lib/QtCore.framework/Headers/q20bit.h \
@@ -8431,7 +8448,9 @@ CMakeFiles/qt-map1.dir/qt-map1_autogen/mocs_compilation.cpp.o: qt-map1_autogen/m
   /opt/homebrew/lib/QtCore.framework/Headers/qurl.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qutf8stringview.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qvariant.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvariantlist.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qvarlengtharray.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvector.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qversionnumber.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qversiontagging.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qxptype_traits.h \
@@ -9593,6 +9612,8 @@ qt-map1_autogen/mocs_compilation.cpp:
 
 /opt/homebrew/lib/QtGui.framework/Headers/qaccessible_base.h:
 
+/opt/homebrew/lib/QtCore.framework/Headers/qvariantlist.h:
+
 /opt/homebrew/lib/QtCore.framework/Headers/qproperty.h:
 
 /opt/homebrew/lib/QtCore.framework/Headers/qendian.h:
@@ -10663,9 +10684,15 @@ qt-map1_autogen/EWIEGA46WW/moc_OverlayItem.cpp:
 
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginTargets.cmake:
 
+/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginTargets-release.cmake:
+
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtvkbpluginspluginTargets.cmake:
 
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginAdditionalTargetInfo.cmake:
+
+/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dparticles3dpluginTargetsPrecheck.cmake:
+
+/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dparticles3dpluginTargets.cmake:
 
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dparticles3dpluginConfig.cmake:
 
@@ -11341,8 +11368,6 @@ qt-map1_qmltyperegistrations.cpp:
 
 /opt/homebrew/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargetsPrecheck.cmake:
 
-/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dphysicshelperspluginTargets-release.cmake:
-
 /opt/homebrew/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargets.cmake:
 
 /opt/homebrew/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginConfig.cmake:
@@ -11627,6 +11652,8 @@ qt-map1_autogen/moc_predefs.h:
 
 /opt/homebrew/lib/cmake/Qt6/QtPublicTargetHelpers.cmake:
 
+/opt/homebrew/lib/QtCore.framework/Headers/QVector:
+
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__iterator/front_insert_iterator.h:
 
 /opt/homebrew/lib/cmake/Qt6/QtPublicSbomSystemDepHelpers.cmake:
@@ -11646,8 +11673,6 @@ qt-map1_autogen/moc_predefs.h:
 /opt/homebrew/lib/cmake/Qt6/QtPublicSbomHelpers.cmake:
 
 /opt/homebrew/lib/cmake/Qt6/QtPublicSbomGenerationCycloneDXHelpers.cmake:
-
-/opt/homebrew/lib/cmake/Qt6/QtPublicSbomFileHelpers.cmake:
 
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6LabsStyleKitImplpluginConfig.cmake:
 
@@ -11698,8 +11723,6 @@ qt-map1_autogen/moc_predefs.h:
 /opt/homebrew/lib/cmake/Qt6QuickShapes/Qt6QuickShapesAdditionalTargetInfo.cmake:
 
 /opt/homebrew/lib/cmake/Qt6/QtPublicAndroidHelpers.cmake:
-
-/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dparticles3dpluginTargets.cmake:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/count_if.h:
 
@@ -11907,6 +11930,8 @@ qt-map1_autogen/moc_predefs.h:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qversionnumber.h:
 
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvector.h:
+
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6QmlNetworkpluginTargets-release.cmake:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvariant.h:
@@ -12002,6 +12027,8 @@ qt-map1_autogen/moc_predefs.h:
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qstringconverter_base.h:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qstringconverter.h:
+
+/opt/homebrew/lib/QtCore.framework/Headers/QVariantList:
 
 /opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquicktemplates2pluginTargets-release.cmake:
 
@@ -12145,6 +12172,8 @@ qt-map1_autogen/moc_predefs.h:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qcoreapplication.h:
 
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QRectF:
+
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h:
 
 /opt/homebrew/lib/cmake/Qt6Core/Qt6QDarwinMicrophonePermissionPluginAdditionalTargetInfo.cmake:
@@ -12201,8 +12230,6 @@ qt-map1_autogen/moc_predefs.h:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qarraydatapointer.h:
 
-/opt/homebrew/lib/cmake/Qt6Qml/QmlPlugins/Qt6qtquick3dparticles3dpluginTargetsPrecheck.cmake:
-
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qarraydataops.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__iterator/size.h:
@@ -12226,6 +12253,8 @@ qt-map1_autogen/moc_predefs.h:
 /opt/homebrew/lib/cmake/Qt6Positioning/Qt6PositioningAdditionalTargetInfo.cmake:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/q17memory.h:
+
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVector:
 
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVariant:
 
@@ -14051,6 +14080,10 @@ CMakeFiles/4.3.0/CMakeCXXCompiler.cmake:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__concepts/invocable.h:
 
+/opt/homebrew/lib/cmake/Qt6/QtPublicSbomFileHelpers.cmake:
+
+/opt/homebrew/lib/QtCore.framework/Headers/qvector.h:
+
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__algorithm/lexicographical_compare_three_way.h:
 
 /opt/homebrew/lib/cmake/Qt6Core/Qt6QDarwinLocationPermissionPluginTargets.cmake:
@@ -14090,6 +14123,8 @@ CMakeFiles/4.3.0/CMakeCXXCompiler.cmake:
 /opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qbasicatomic.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__bit/popcount.h:
+
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/qvariantlist.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_fd_zero.h:
 
@@ -14168,6 +14203,8 @@ CMakeFiles/4.3.0/CMakeCXXCompiler.cmake:
 /opt/homebrew/lib/cmake/Qt6Location/Qt6LocationTargets.cmake:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/__xlocale.h:
+
+/opt/homebrew/Cellar/qtbase/6.11.0/lib/QtCore.framework/Versions/A/Headers/QVariantList:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__fwd/set.h:
 

@@ -15,10 +15,50 @@
                         },
                         {
                             "codegenResult": 2,
+                            "column": 5,
+                            "durationMicroseconds": 0,
+                            "functionName": "tileToLat",
+                            "line": 19,
+                            "message": "Functions without type annotations won't be compiled"
+                        },
+                        {
+                            "codegenResult": 2,
+                            "column": 5,
+                            "durationMicroseconds": 3000,
+                            "functionName": "updateOverlayTiles",
+                            "line": 26,
+                            "message": "Cannot retrieve a non-object type by ID: overlay"
+                        },
+                        {
+                            "codegenResult": 0,
+                            "column": 17,
+                            "durationMicroseconds": 0,
+                            "functionName": "target",
+                            "line": 65,
+                            "message": ""
+                        },
+                        {
+                            "codegenResult": 2,
+                            "column": 9,
+                            "durationMicroseconds": 0,
+                            "functionName": "onCenterChanged",
+                            "line": 66,
+                            "message": "Cannot retrieve a non-object type by ID: overlay"
+                        },
+                        {
+                            "codegenResult": 2,
+                            "column": 9,
+                            "durationMicroseconds": 0,
+                            "functionName": "onZoomLevelChanged",
+                            "line": 67,
+                            "message": "Cannot retrieve a non-object type by ID: overlay"
+                        },
+                        {
+                            "codegenResult": 2,
                             "column": 17,
                             "durationMicroseconds": 0,
                             "functionName": "center",
-                            "line": 32,
+                            "line": 88,
                             "message": "Cannot generate efficient code for internal conversion with incompatible or ambiguous types: call to method coordinate, returning QGeoCoordinate -> call to method coordinate, returning QGeoCoordinate"
                         },
                         {
@@ -26,7 +66,7 @@
                             "column": 23,
                             "durationMicroseconds": 0,
                             "functionName": "fill",
-                            "line": 19,
+                            "line": 75,
                             "message": ""
                         },
                         {
@@ -34,7 +74,7 @@
                             "column": 35,
                             "durationMicroseconds": 0,
                             "functionName": "onTranslationChanged",
-                            "line": 41,
+                            "line": 97,
                             "message": "Functions without type annotations won't be compiled"
                         },
                         {
@@ -42,7 +82,7 @@
                             "column": 35,
                             "durationMicroseconds": 0,
                             "functionName": "onTranslationChanged",
-                            "line": 41,
+                            "line": 97,
                             "message": ""
                         },
                         {
@@ -50,7 +90,7 @@
                             "column": 30,
                             "durationMicroseconds": 0,
                             "functionName": "acceptedDevices",
-                            "line": 50,
+                            "line": 106,
                             "message": ""
                         },
                         {
@@ -58,7 +98,7 @@
                             "column": 22,
                             "durationMicroseconds": 0,
                             "functionName": "onWheel",
-                            "line": 51,
+                            "line": 107,
                             "message": ""
                         },
                         {
@@ -66,7 +106,7 @@
                             "column": 22,
                             "durationMicroseconds": 0,
                             "functionName": "onWheel",
-                            "line": 51,
+                            "line": 107,
                             "message": ""
                         },
                         {
@@ -74,7 +114,7 @@
                             "column": 39,
                             "durationMicroseconds": 0,
                             "functionName": "baseZoom",
-                            "line": 64,
+                            "line": 120,
                             "message": ""
                         },
                         {
@@ -82,7 +122,7 @@
                             "column": 30,
                             "durationMicroseconds": 0,
                             "functionName": "onActiveChanged",
-                            "line": 65,
+                            "line": 121,
                             "message": ""
                         },
                         {
@@ -90,7 +130,7 @@
                             "column": 29,
                             "durationMicroseconds": 0,
                             "functionName": "onScaleChanged",
-                            "line": 68,
+                            "line": 124,
                             "message": "Functions without type annotations won't be compiled"
                         },
                         {
@@ -98,7 +138,55 @@
                             "column": 29,
                             "durationMicroseconds": 0,
                             "functionName": "onScaleChanged",
-                            "line": 68,
+                            "line": 124,
+                            "message": ""
+                        },
+                        {
+                            "codegenResult": 0,
+                            "column": 31,
+                            "durationMicroseconds": 0,
+                            "functionName": "onVisibleChanged",
+                            "line": 147,
+                            "message": ""
+                        },
+                        {
+                            "codegenResult": 2,
+                            "column": 22,
+                            "durationMicroseconds": 4000,
+                            "functionName": "onPaint",
+                            "line": 149,
+                            "message": "Cannot retrieve a non-object type by ID: root"
+                        },
+                        {
+                            "codegenResult": 0,
+                            "column": 27,
+                            "durationMicroseconds": 0,
+                            "functionName": "fill",
+                            "line": 136,
+                            "message": ""
+                        },
+                        {
+                            "codegenResult": 0,
+                            "column": 25,
+                            "durationMicroseconds": 0,
+                            "functionName": "target",
+                            "line": 143,
+                            "message": ""
+                        },
+                        {
+                            "codegenResult": 0,
+                            "column": 17,
+                            "durationMicroseconds": 0,
+                            "functionName": "onCenterChanged",
+                            "line": 144,
+                            "message": ""
+                        },
+                        {
+                            "codegenResult": 0,
+                            "column": 17,
+                            "durationMicroseconds": 0,
+                            "functionName": "onZoomLevelChanged",
+                            "line": 145,
                             "message": ""
                         },
                         {
@@ -106,7 +194,7 @@
                             "column": 22,
                             "durationMicroseconds": 0,
                             "functionName": "mapItem",
-                            "line": 81,
+                            "line": 229,
                             "message": "Could not find property \"mapItem\"."
                         },
                         {
@@ -114,7 +202,7 @@
                             "column": 27,
                             "durationMicroseconds": 0,
                             "functionName": "fill",
-                            "line": 80,
+                            "line": 228,
                             "message": "Could not find property \"fill\"."
                         },
                         {
@@ -122,7 +210,7 @@
                             "column": 26,
                             "durationMicroseconds": 0,
                             "functionName": "standardButtons",
-                            "line": 98,
+                            "line": 246,
                             "message": "Could not find property \"standardButtons\"."
                         },
                         {
@@ -130,7 +218,7 @@
                             "column": 27,
                             "durationMicroseconds": 0,
                             "functionName": "centerIn",
-                            "line": 97,
+                            "line": 245,
                             "message": "Could not find property \"centerIn\"."
                         },
                         {
@@ -138,7 +226,7 @@
                             "column": 24,
                             "durationMicroseconds": 0,
                             "functionName": "width",
-                            "line": 105,
+                            "line": 253,
                             "message": ""
                         },
                         {
@@ -146,7 +234,7 @@
                             "column": 27,
                             "durationMicroseconds": 0,
                             "functionName": "wrapMode",
-                            "line": 106,
+                            "line": 254,
                             "message": ""
                         },
                         {
@@ -154,7 +242,7 @@
                             "column": 24,
                             "durationMicroseconds": 0,
                             "functionName": "width",
-                            "line": 112,
+                            "line": 260,
                             "message": ""
                         },
                         {
@@ -162,7 +250,7 @@
                             "column": 27,
                             "durationMicroseconds": 0,
                             "functionName": "wrapMode",
-                            "line": 113,
+                            "line": 261,
                             "message": ""
                         },
                         {
@@ -170,7 +258,7 @@
                             "column": 23,
                             "durationMicroseconds": 0,
                             "functionName": "text",
-                            "line": 115,
+                            "line": 263,
                             "message": ""
                         },
                         {
@@ -178,7 +266,7 @@
                             "column": 32,
                             "durationMicroseconds": 0,
                             "functionName": "width",
-                            "line": 120,
+                            "line": 268,
                             "message": ""
                         },
                         {
@@ -186,7 +274,7 @@
                             "column": 50,
                             "durationMicroseconds": 0,
                             "functionName": "text",
-                            "line": 126,
+                            "line": 274,
                             "message": "Cannot access value for name appVersion"
                         },
                         {
@@ -194,7 +282,7 @@
                             "column": 50,
                             "durationMicroseconds": 0,
                             "functionName": "text",
-                            "line": 128,
+                            "line": 276,
                             "message": "Cannot access value for name buildDate"
                         },
                         {
@@ -202,7 +290,7 @@
                             "column": 27,
                             "durationMicroseconds": 0,
                             "functionName": "text",
-                            "line": 133,
+                            "line": 281,
                             "message": "Cannot access value for name appUrl"
                         },
                         {
@@ -210,7 +298,7 @@
                             "column": 38,
                             "durationMicroseconds": 0,
                             "functionName": "cursorShape",
-                            "line": 136,
+                            "line": 284,
                             "message": ""
                         },
                         {
@@ -218,7 +306,7 @@
                             "column": 36,
                             "durationMicroseconds": 0,
                             "functionName": "onClicked",
-                            "line": 137,
+                            "line": 285,
                             "message": "Cannot access value for name appUrl"
                         },
                         {
@@ -226,7 +314,7 @@
                             "column": 39,
                             "durationMicroseconds": 0,
                             "functionName": "fill",
-                            "line": 135,
+                            "line": 283,
                             "message": ""
                         },
                         {
@@ -234,7 +322,7 @@
                             "column": 20,
                             "durationMicroseconds": 0,
                             "functionName": "onClicked",
-                            "line": 155,
+                            "line": 303,
                             "message": "Could not find signal \"clicked\"."
                         },
                         {
@@ -242,7 +330,7 @@
                             "column": 18,
                             "durationMicroseconds": 0,
                             "functionName": "top",
-                            "line": 151,
+                            "line": 299,
                             "message": "Could not find property \"top\"."
                         },
                         {
@@ -250,7 +338,7 @@
                             "column": 19,
                             "durationMicroseconds": 0,
                             "functionName": "left",
-                            "line": 152,
+                            "line": 300,
                             "message": "Could not find property \"left\"."
                         },
                         {
@@ -258,7 +346,7 @@
                             "column": 16,
                             "durationMicroseconds": 0,
                             "functionName": "color",
-                            "line": 168,
+                            "line": 316,
                             "message": "Cannot generate efficient code for internal conversion with incompatible or ambiguous types: call to method rgba, returning QVariant -> QColor stored as QVariant"
                         },
                         {
@@ -266,7 +354,7 @@
                             "column": 16,
                             "durationMicroseconds": 0,
                             "functionName": "width",
-                            "line": 170,
+                            "line": 318,
                             "message": ""
                         },
                         {
@@ -274,7 +362,7 @@
                             "column": 17,
                             "durationMicroseconds": 0,
                             "functionName": "height",
-                            "line": 171,
+                            "line": 319,
                             "message": ""
                         },
                         {
@@ -282,7 +370,7 @@
                             "column": 21,
                             "durationMicroseconds": 0,
                             "functionName": "bottom",
-                            "line": 164,
+                            "line": 312,
                             "message": ""
                         },
                         {
@@ -290,7 +378,7 @@
                             "column": 19,
                             "durationMicroseconds": 0,
                             "functionName": "left",
-                            "line": 165,
+                            "line": 313,
                             "message": ""
                         },
                         {
@@ -298,7 +386,7 @@
                             "column": 19,
                             "durationMicroseconds": 0,
                             "functionName": "text",
-                            "line": 179,
+                            "line": 327,
                             "message": "Cannot generate efficient code for call to untyped JavaScript function"
                         },
                         {
@@ -306,7 +394,7 @@
                             "column": 31,
                             "durationMicroseconds": 0,
                             "functionName": "centerIn",
-                            "line": 175,
+                            "line": 323,
                             "message": ""
                         },
                         {
@@ -314,7 +402,7 @@
                             "column": 18,
                             "durationMicroseconds": 0,
                             "functionName": "top",
-                            "line": 191,
+                            "line": 339,
                             "message": ""
                         },
                         {
@@ -322,7 +410,7 @@
                             "column": 20,
                             "durationMicroseconds": 0,
                             "functionName": "right",
-                            "line": 192,
+                            "line": 340,
                             "message": ""
                         },
                         {
@@ -330,7 +418,7 @@
                             "column": 24,
                             "durationMicroseconds": 0,
                             "functionName": "onClicked",
-                            "line": 200,
+                            "line": 348,
                             "message": "Could not find signal \"clicked\"."
                         },
                         {
@@ -338,7 +426,23 @@
                             "column": 24,
                             "durationMicroseconds": 0,
                             "functionName": "onClicked",
-                            "line": 205,
+                            "line": 353,
+                            "message": "Could not find signal \"clicked\"."
+                        },
+                        {
+                            "codegenResult": 2,
+                            "column": 26,
+                            "durationMicroseconds": 0,
+                            "functionName": "highlighted",
+                            "line": 361,
+                            "message": "Could not find property \"highlighted\"."
+                        },
+                        {
+                            "codegenResult": 2,
+                            "column": 24,
+                            "durationMicroseconds": 0,
+                            "functionName": "onClicked",
+                            "line": 362,
                             "message": "Could not find signal \"clicked\"."
                         },
                         {
@@ -346,7 +450,7 @@
                             "column": 19,
                             "durationMicroseconds": 0,
                             "functionName": "text",
-                            "line": 213,
+                            "line": 368,
                             "message": "Could not find property \"text\"."
                         },
                         {
@@ -354,7 +458,7 @@
                             "column": 24,
                             "durationMicroseconds": 0,
                             "functionName": "onClicked",
-                            "line": 215,
+                            "line": 370,
                             "message": "Could not find signal \"clicked\"."
                         }
                     ],

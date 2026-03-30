@@ -3,7 +3,6 @@
 #include <QSGMaterial>
 #include <QSGMaterialShader>
 #include <QSGTexture>
-#include <memory>
 
 // ─── FloatGridShader ─────────────────────────────────────────────────────────
 //
@@ -45,7 +44,8 @@ public:
     // Used by the scene graph to decide whether two draw calls can be batched.
     int compare(const QSGMaterial *other) const override;
 
-    std::unique_ptr<QSGTexture> texture; // grayscale float-data texture
+    // Non-owning pointer — texture is owned by TileGridRootNode in OverlayItem.cpp
+    QSGTexture *texture = nullptr;
     float dataMin = 0.0f;
     float dataMax = 1.0f;
 };

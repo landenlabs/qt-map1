@@ -1073,4 +1073,9 @@ CMakeFiles/qt-map1.dir/main.cpp.o: \
   /opt/homebrew/lib/QtGui.framework/Headers/qfont.h \
   /opt/homebrew/lib/QtCore.framework/Headers/qendian.h \
   /opt/homebrew/lib/QtGui.framework/Headers/qaccessible.h \
-  /opt/homebrew/lib/QtGui.framework/Headers/qaccessible_base.h
+  /opt/homebrew/lib/QtGui.framework/Headers/qaccessible_base.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/QRectF \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVector \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvector.h \
+  /opt/homebrew/lib/QtCore.framework/Headers/QVariantList \
+  /opt/homebrew/lib/QtCore.framework/Headers/qvariantlist.h

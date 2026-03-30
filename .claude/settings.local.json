@@ -13,7 +13,12 @@
       "Bash(qsb --help)",
       "Bash(qsb --dump build/.qsb/shaders/floatgrid.vert.qsb)",
       "Bash(qsb --dump /Users/dennislang/opt/projects/qt-projects/qt-map1/build/.qsb/shaders/floatgrid.vert.qsb)",
-      "Bash(qsb:*)"
+      "Bash(qsb:*)",
+      "Bash(curl:*)",
+      "Bash(find /opt/homebrew -name *.cpp -path *osm*)",
+      "Bash(find /opt/homebrew -name *.json -path *osm*)",
+      "Bash(find /opt/homebrew -name osm_mapping*)",
+      "WebFetch(domain:doc.qt.io)"
     ]
   }
 }

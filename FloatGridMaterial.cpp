@@ -66,11 +66,9 @@ void FloatGridShader::updateSampledImage(RenderState &state,
                                           QSGMaterial * /*oldMat*/)
 {
     if (binding == 1) {
-        QSGTexture *tex = static_cast<FloatGridMaterial *>(newMat)->texture.get();
+        QSGTexture *tex = static_cast<FloatGridMaterial *>(newMat)->texture;
         if (tex) {
-            // commitTextureOperations uploads the QImage pixel data to the GPU.
-            // Without this call the underlying QRhiTexture is never populated and
-            // sampling returns zero → uniform dark colour with no variation.
+            // commitTextureOperations uploads pixel data to the GPU.
             tex->commitTextureOperations(state.rhi(), state.resourceUpdateBatch());
             *texture = tex;
         }
@@ -98,7 +96,7 @@ QSGMaterialShader *FloatGridMaterial::createShader(QSGRendererInterface::RenderM
 int FloatGridMaterial::compare(const QSGMaterial *other) const
 {
     const auto *o = static_cast<const FloatGridMaterial *>(other);
-    const void *a = texture.get();
-    const void *b = o->texture.get();
+    const void *a = texture;
+    const void *b = o->texture;
     return (a < b) ? -1 : (a > b) ? 1 : 0;
 }

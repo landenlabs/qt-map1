@@ -3,7 +3,7 @@
         "classes": [
             {
                 "className": "OverlayItem",
-                "lineNumber": 25,
+                "lineNumber": 21,
                 "methods": [
                     {
                         "access": "public",
@@ -22,8 +22,21 @@
                             }
                         ],
                         "index": 5,
-                        "lineNumber": 48,
+                        "lineNumber": 40,
                         "name": "drawTile",
+                        "returnType": "void"
+                    },
+                    {
+                        "access": "public",
+                        "arguments": [
+                            {
+                                "name": "rects",
+                                "type": "QVariantList"
+                            }
+                        ],
+                        "index": 6,
+                        "lineNumber": 45,
+                        "name": "setVisibleTiles",
                         "returnType": "void"
                     }
                 ],
@@ -34,7 +47,7 @@
                         "designable": true,
                         "final": false,
                         "index": 0,
-                        "lineNumber": 29,
+                        "lineNumber": 25,
                         "name": "mapItem",
                         "notify": "mapItemChanged",
                         "override": false,
@@ -52,7 +65,7 @@
                         "designable": true,
                         "final": false,
                         "index": 1,
-                        "lineNumber": 30,
+                        "lineNumber": 26,
                         "name": "endpoint",
                         "notify": "endpointChanged",
                         "override": false,
@@ -70,7 +83,7 @@
                         "designable": true,
                         "final": false,
                         "index": 2,
-                        "lineNumber": 31,
+                        "lineNumber": 27,
                         "name": "dataMin",
                         "notify": "dataMinChanged",
                         "override": false,
@@ -88,7 +101,7 @@
                         "designable": true,
                         "final": false,
                         "index": 3,
-                        "lineNumber": 32,
+                        "lineNumber": 28,
                         "name": "dataMax",
                         "notify": "dataMaxChanged",
                         "override": false,
@@ -107,28 +120,28 @@
                     {
                         "access": "public",
                         "index": 0,
-                        "lineNumber": 51,
+                        "lineNumber": 48,
                         "name": "mapItemChanged",
                         "returnType": "void"
                     },
                     {
                         "access": "public",
                         "index": 1,
-                        "lineNumber": 52,
+                        "lineNumber": 49,
                         "name": "endpointChanged",
                         "returnType": "void"
                     },
                     {
                         "access": "public",
                         "index": 2,
-                        "lineNumber": 53,
+                        "lineNumber": 50,
                         "name": "dataMinChanged",
                         "returnType": "void"
                     },
                     {
                         "access": "public",
                         "index": 3,
-                        "lineNumber": 54,
+                        "lineNumber": 51,
                         "name": "dataMaxChanged",
                         "returnType": "void"
                     }
@@ -137,7 +150,7 @@
                     {
                         "access": "private",
                         "index": 4,
-                        "lineNumber": 62,
+                        "lineNumber": 59,
                         "name": "onMapViewportChanged",
                         "returnType": "void"
                     }
