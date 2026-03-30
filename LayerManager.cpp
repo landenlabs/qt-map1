@@ -170,20 +170,24 @@ void LayerManager::handleTimestampReply(QNetworkReply *reply, int index)
         return;
     }
 
-    const QJsonArray fts = series.first().toObject().value("fts").toArray();
-    if (fts.isEmpty()) {
+    const QJsonObject seriesObj = series.first().toObject();
+    const QJsonArray  ftsArr   = seriesObj.value("fts").toArray();
+    if (ftsArr.isEmpty()) {
         emit layerError(index, "Time-series 'fts' array is empty");
         return;
     }
 
-    const qint64 timestamp = fts.first().toInteger();
+    const qint64 ftsValue = ftsArr.first().toInteger();
+    const qint64 tsValue  = seriesObj.value("ts").toInteger();
 
-    // Substitute {k} and {t}; leave {x}, {y}, {z} for the tile fetcher
+    // Substitute {k}, {fts}, {ts}; leave {x}, {y}, {z} for the tile fetcher
     const QString tileUrl = substituteKey(m_layers[index].urlPng)
-                                .replace("{t}", QString::number(timestamp));
+                                .replace("{fts}", QString::number(ftsValue))
+                                .replace("{ts}",  QString::number(tsValue));
 
-    qInfo("LayerManager: layer %d '%s' ready – ts=%lld",
-          index, qPrintable(m_layers[index].name), (long long)timestamp);
+    qInfo("LayerManager: layer %d '%s' ready – fts=%lld ts=%lld",
+          index, qPrintable(m_layers[index].name),
+          (long long)ftsValue, (long long)tsValue);
 
     emit layerReady(index, tileUrl);
 }

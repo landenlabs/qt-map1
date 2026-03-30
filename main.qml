@@ -59,13 +59,27 @@ ApplicationWindow {
         overlay.setVisibleTiles(rects)
     }
 
+    // Refresh tile positions for all visible weather layer overlays
+    function refreshWeatherOverlays() {
+        for (var i = 0; i < weatherOverlays.count; i++) {
+            var item = weatherOverlays.itemAt(i)
+            if (item && item.visible) item.refresh()
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Respond to map viewport changes while overlay is active
     // -----------------------------------------------------------------------
     Connections {
         target: map
-        function onCenterChanged()    { if (overlay.visible) updateOverlayTiles() }
-        function onZoomLevelChanged() { if (overlay.visible) updateOverlayTiles() }
+        function onCenterChanged()    {
+            if (overlay.visible) updateOverlayTiles()
+            refreshWeatherOverlays()
+        }
+        function onZoomLevelChanged() {
+            if (overlay.visible) updateOverlayTiles()
+            refreshWeatherOverlays()
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -241,6 +255,91 @@ ApplicationWindow {
                     dataMax: 1.0
                     opacity: 0.75
                     visible: false
+                }
+
+                // -------------------------------------------------------
+                // Weather PNG tile overlays – one Item per layer entry.
+                // Indexed identically to the layer buttons Repeater so
+                // weatherOverlays.itemAt(index) matches layerRepeater.itemAt(index).
+                // -------------------------------------------------------
+                Repeater {
+                    id: weatherOverlays
+                    model: layerManager.layers
+
+                    Item {
+                        id: weatherOverlayItem
+                        anchors.fill: parent
+                        visible: false
+                        opacity: 0.7
+
+                        required property int index
+                        property string urlTemplate: ""
+                        property var tiles: []
+
+                        function refresh() {
+                            if (!visible || urlTemplate === "") { tiles = []; return }
+                            var z  = Math.round(map.zoomLevel)
+                            var n  = Math.pow(2, z)
+                            var nw = map.toCoordinate(Qt.point(0, 0),                          false)
+                            var se = map.toCoordinate(Qt.point(map.width, map.height), false)
+                            if (!nw.isValid || !se.isValid) { tiles = []; return }
+
+                            var txMin = Math.max(0,     Math.floor((nw.longitude + 180.0) / 360.0 * n))
+                            var txMax = Math.min(n - 1, Math.floor((se.longitude + 180.0) / 360.0 * n))
+                            var tyMin = Math.max(0,     Math.floor((1.0 - Math.log(
+                                            Math.tan(nw.latitude * Math.PI / 180.0)
+                                            + 1.0 / Math.cos(nw.latitude * Math.PI / 180.0))
+                                            / Math.PI) / 2.0 * n))
+                            var tyMax = Math.min(n - 1, Math.floor((1.0 - Math.log(
+                                            Math.tan(se.latitude * Math.PI / 180.0)
+                                            + 1.0 / Math.cos(se.latitude * Math.PI / 180.0))
+                                            / Math.PI) / 2.0 * n))
+
+                            var newTiles = []
+                            for (var tx = txMin; tx <= txMax; tx++) {
+                                for (var ty = tyMin; ty <= tyMax; ty++) {
+                                    var lonL = tx       / n * 360.0 - 180.0
+                                    var lonR = (tx + 1) / n * 360.0 - 180.0
+                                    var latT = root.tileToLat(ty,     z)
+                                    var latB = root.tileToLat(ty + 1, z)
+                                    var ptTL = map.fromCoordinate(
+                                                   QtPositioning.coordinate(latT, lonL), false)
+                                    var ptBR = map.fromCoordinate(
+                                                   QtPositioning.coordinate(latB, lonR), false)
+                                    var tileUrl = urlTemplate
+                                                    .replace("{z}", z)
+                                                    .replace("{x}", tx)
+                                                    .replace("{y}", ty)
+                                    newTiles.push({
+                                        x: ptTL.x, y: ptTL.y,
+                                        w: ptBR.x - ptTL.x,
+                                        h: ptBR.y - ptTL.y,
+                                        url: tileUrl
+                                    })
+                                }
+                            }
+                            tiles = newTiles
+                        }
+
+                        Repeater {
+                            model: weatherOverlayItem.tiles
+                            Image {
+                                x:      modelData.x
+                                y:      modelData.y
+                                width:  modelData.w
+                                height: modelData.h
+                                source: modelData.url
+                                fillMode: Image.Stretch
+                                smooth: true
+                                cache: true
+                                asynchronous: true
+                                onStatusChanged: {
+                                    if (status === Image.Error)
+                                        appLogger.append("Tile load error: url=" + source)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -553,10 +652,13 @@ ApplicationWindow {
 
                         onClicked: {
                             layerActive = !layerActive
-                            if (layerActive)
+                            if (layerActive) {
                                 layerManager.enableLayer(index)
-                            else
+                            } else {
                                 layerManager.disableLayer(index)
+                                var wo = weatherOverlays.itemAt(index)
+                                if (wo) { wo.visible = false; wo.urlTemplate = ""; wo.tiles = [] }
+                            }
                         }
                     }
                 }
@@ -646,13 +748,20 @@ ApplicationWindow {
 
         function onLayerReady(index, tileUrlTemplate) {
             appLogger.append("Layer " + index + " ready: " + tileUrlTemplate)
-            // TODO: pass tileUrlTemplate to overlay tile renderer
+            var wo = weatherOverlays.itemAt(index)
+            if (wo) {
+                wo.urlTemplate = tileUrlTemplate
+                wo.visible = true
+                wo.refresh()
+            }
         }
 
         function onLayerError(index, errorMessage) {
             appLogger.append("Layer " + index + " error: " + errorMessage)
-            var item = layerRepeater.itemAt(index)
-            if (item) item.layerActive = false
+            var wo = weatherOverlays.itemAt(index)
+            if (wo) { wo.visible = false; wo.urlTemplate = ""; wo.tiles = [] }
+            var btn = layerRepeater.itemAt(index)
+            if (btn) btn.layerActive = false
         }
     }
 }
