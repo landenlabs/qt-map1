@@ -31,6 +31,7 @@ GridTileCache::GridTileCache(const QString &apiKey,
 // ─── requestTileImage ─────────────────────────────────────────────────────────
 
 void GridTileCache::requestTileImage(const QString &product, const QString &type,
+                                     const QString &urlInfo, const QString &urlData,
                                      int z, int x, int y)
 {
     const QString key = tileKey(product, z, x, y);
@@ -60,7 +61,7 @@ void GridTileCache::requestTileImage(const QString &product, const QString &type
 
     qInfo("GridTileCache: fetching %s", qPrintable(key));
     m_inFlight.insert(key);
-    m_loader->fetchTile(product, type, x, y, z);
+    m_loader->fetchTile(product, type, urlInfo, urlData, x, y, z);
 }
 
 // ─── onTileReady ─────────────────────────────────────────────────────────────

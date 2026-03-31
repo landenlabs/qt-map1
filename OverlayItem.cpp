@@ -106,11 +106,15 @@ void OverlayItem::setDataMax(float v)
 
 // ─── setGridProduct ───────────────────────────────────────────────────────────
 
-void OverlayItem::setGridProduct(const QString &product, const QString &type, int maxLod)
+void OverlayItem::setGridProduct(const QString &product, const QString &type,
+                                  int maxLod,
+                                  const QString &urlInfo, const QString &urlData)
 {
     m_product     = product;
     m_productType = type;
     m_maxLod      = maxLod;
+    m_urlInfo     = urlInfo;
+    m_urlData     = urlData;
 }
 
 // ─── test ────────────────────────────────────────────────────────────────────
@@ -119,8 +123,9 @@ void OverlayItem::test()
 {
     qInfo("OverlayItem::test — calling GridLoader::fetchTile");
     m_gridLoader->fetchTile(
-        QStringLiteral("1248:Temperaturesurface"),
-        QStringLiteral("float4"),
+        m_product.isEmpty() ? QStringLiteral("1248:Temperaturesurface") : m_product,
+        m_productType.isEmpty() ? QStringLiteral("float4") : m_productType,
+        m_urlInfo, m_urlData,
         /*x=*/2, /*y=*/2, /*z=*/2);
 }
 
@@ -132,7 +137,8 @@ void OverlayItem::test()
 void OverlayItem::drawTile(int z, int x, int y)
 {
     if (z <= m_maxLod && !m_product.isEmpty()) {
-        m_tileCache->requestTileImage(m_product, m_productType, z, x, y);
+        m_tileCache->requestTileImage(m_product, m_productType,
+                                      m_urlInfo, m_urlData, z, x, y);
     } else {
         m_pendingImages[kTestKey] = makeTestGrid(256, 256);
         m_imageDirty = true;
@@ -178,6 +184,7 @@ void OverlayItem::setVisibleTiles(const QVariantList &tiles)
         if (!m_product.isEmpty()) {
             if (ti.z <= m_maxLod) {
                 m_tileCache->requestTileImage(m_product, m_productType,
+                                              m_urlInfo, m_urlData,
                                               ti.z, ti.x, ti.y);
             } else if (!m_pendingImages.contains(kTestKey)) {
                 // Ensure the test texture exists for higher zoom levels.

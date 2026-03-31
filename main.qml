@@ -50,13 +50,11 @@ ApplicationWindow {
                 var ptTL = map.fromCoordinate(QtPositioning.coordinate(latT, lonL), false)
                 var ptBR = map.fromCoordinate(QtPositioning.coordinate(latB, lonR), false)
 
-                // Only render overlay on tiles where (x + y) is even (checkerboard)
-                if ((tx + ty) % 2 === 0)
-                    tiles.push({
-                        z: z, x: tx, y: ty,
-                        rect: Qt.rect(ptTL.x, ptTL.y,
-                                      ptBR.x - ptTL.x, ptBR.y - ptTL.y)
-                    })
+                tiles.push({
+                    z: z, x: tx, y: ty,
+                    rect: Qt.rect(ptTL.x, ptTL.y,
+                                  ptBR.x - ptTL.x, ptBR.y - ptTL.y)
+                })
             }
         }
         overlay.setVisibleTiles(tiles)
@@ -632,7 +630,15 @@ ApplicationWindow {
                 text: "Test"
                 height: 30
                 font.pixelSize: 11
-                onClicked: overlay.test()
+                onClicked: {
+                    // Use URLs from the first grids.json entry
+                    if (gridManager.grids.length > 0) {
+                        var g = gridManager.grids[0]
+                        overlay.setGridProduct(g.product, g.type, g.maxLod,
+                                               g.urlInfo, g.urlData)
+                    }
+                    overlay.test()
+                }
             }
 
             Flow {
@@ -819,9 +825,10 @@ ApplicationWindow {
         function onGridReady(index, endpoint) {
             appLogger.append("Grid " + index + " ready: " + endpoint)
             overlay.endpoint = endpoint
-            // Tell the overlay which product is active so drawTile can fetch real data
+            // Tell the overlay which product and URLs are active
             var grid = gridManager.grids[index]
-            overlay.setGridProduct(grid.product, grid.type, grid.maxLod)
+            overlay.setGridProduct(grid.product, grid.type, grid.maxLod,
+                                   grid.urlInfo, grid.urlData)
             overlay.drawTile(0, 0, 0)
             updateOverlayTiles()
             overlay.visible = true

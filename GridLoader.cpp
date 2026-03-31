@@ -86,11 +86,6 @@ void GridLoaderShader::updateSampledImage(RenderState &state,
 
 // ─── GridLoader ───────────────────────────────────────────────────────────────
 
-const QString GridLoader::kInfoUrl =
-    QStringLiteral("https://api.weather.com/v2/tiler/info");
-const QString GridLoader::kDataUrl =
-    QStringLiteral("https://api.weather.com/v2/tiler/data");
-
 GridLoader::GridLoader(const QString &apiKey, QObject *parent)
     : QObject(parent), m_apiKey(apiKey)
 {
@@ -121,15 +116,18 @@ int GridLoader::compare(const QSGMaterial *other) const
 
 void GridLoader::fetchTile(const QString &product,
                             const QString &type,
+                            const QString &urlInfo,
+                            const QString &urlData,
                             int x, int y, int z)
 {
     // Stage 1: load_product_info – GET tiler/info with meta=true.
+    // Strip any query string from the template; we build the query ourselves.
     QUrlQuery query;
     query.addQueryItem(QStringLiteral("products"), product);
     query.addQueryItem(QStringLiteral("apiKey"),   m_apiKey);
     query.addQueryItem(QStringLiteral("meta"),     QStringLiteral("true"));
 
-    QUrl url(kInfoUrl);
+    QUrl url(urlInfo.section(QLatin1Char('?'), 0, 0));
     url.setQuery(query);
 
     QNetworkRequest req(url);
@@ -138,7 +136,7 @@ void GridLoader::fetchTile(const QString &product,
 
     QNetworkReply *reply = m_network.get(req);
 
-    const PendingTile pending{ product, type, x, y, z };
+    const PendingTile pending{ product, type, urlData, x, y, z };
     connect(reply, &QNetworkReply::finished, this, [this, reply, pending]() {
         handleInfoReply(reply, pending);
         reply->deleteLater();
@@ -266,7 +264,7 @@ void GridLoader::handleInfoReply(QNetworkReply *reply,
     query.addQueryItem(QStringLiteral("y"),        QString::number(pending.y));
     query.addQueryItem(QStringLiteral("apiKey"),   m_apiKey);
 
-    QUrl tileUrl(kDataUrl);
+    QUrl tileUrl(pending.urlData.section(QLatin1Char('?'), 0, 0));
     tileUrl.setQuery(query);
 
     QNetworkRequest tileReq(tileUrl);

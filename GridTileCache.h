@@ -37,7 +37,10 @@ public:
                            QObject *parent = nullptr);
 
     // Request the QImage for one tile.
+    // urlInfo / urlData – endpoint templates from grids.json (query string stripped
+    // internally); passed through to GridLoader::fetchTile on a cache miss.
     void requestTileImage(const QString &product, const QString &type,
+                          const QString &urlInfo, const QString &urlData,
                           int z, int x, int y);
 
     // Unique cache key string: "product:z:x:y" — public so callers can key textures.

@@ -18,13 +18,12 @@
         {
             "name": "GWind",
             "prodCode": "1248",
-            "prodName": "Foo",
+            "prodName": "Foo"
         },
         {
             "name": "GPress",
             "prodCode": "1248",
-            "prodName": "Stuff",
-
+            "prodName": "Stuff"
         }
     ]
 }

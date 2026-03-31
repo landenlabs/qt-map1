@@ -49,16 +49,13 @@ public:
 //                              → read raw bytes
 //                              → unpack big-endian float4 → 2-D grid
 //
-// API endpoint constants mirror the Python SUN_INFO_URL / SUN_DATA_URL.
+// Endpoint URLs are sourced per-call from grids.json via fetchTile().
 
 class GridLoader : public QObject, public QSGMaterial
 {
     Q_OBJECT
 
 public:
-    static const QString kInfoUrl;  // https://api.weather.com/v2/tiler/info
-    static const QString kDataUrl;  // https://api.weather.com/v2/tiler/data
-
     // apiKey – substituted for every request; matches SUN_API_KEY in secrets.cmake.
     explicit GridLoader(const QString &apiKey, QObject *parent = nullptr);
 
@@ -78,8 +75,12 @@ public:
     // Entry point.  Mirrors Python fetch_tile(api_key, product, type, verbose).
     //   product – "prodCode:prodName"  e.g. "1248:Temperaturesurface"
     //   type    – data type string; currently only "float4" is supported
+    //   urlInfo – info endpoint template (query string stripped internally)
+    //   urlData – data endpoint template (query string stripped internally)
     //   x,y,z  – tile coordinates
-    void fetchTile(const QString &product, const QString &type, int x, int y, int z);
+    void fetchTile(const QString &product, const QString &type,
+                   const QString &urlInfo, const QString &urlData,
+                   int x, int y, int z);
 
 signals:
     // Emitted when the float grid is ready.
@@ -94,6 +95,7 @@ private:
     struct PendingTile {
         QString product;   // "prodCode:prodName"
         QString type;      // "float4"
+        QString urlData;   // data endpoint template (from grids.json)
         int     x, y, z;
     };
 

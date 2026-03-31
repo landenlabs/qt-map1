@@ -42,6 +42,7 @@ GridManager::GridManager(const QString &gridsFilePath,
             { "maxLod",    gd.maxLod    },
             { "hasTiming", gd.hasTiming },
             { "urlInfo",   gd.urlInfo   },
+            { "urlData",   gd.urlData   },
         });
     }
 }
