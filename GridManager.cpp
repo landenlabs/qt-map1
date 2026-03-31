@@ -41,8 +41,9 @@ GridManager::GridManager(const QString &gridsFilePath,
             { "comment",   gd.comment   },
             { "maxLod",    gd.maxLod    },
             { "hasTiming", gd.hasTiming },
-            { "urlInfo",   gd.urlInfo   },
-            { "urlData",   gd.urlData   },
+            { "urlInfo",     gd.urlInfo     },
+            { "urlData",     gd.urlData     },
+            { "paletteName", gd.paletteName },
         });
     }
 }
@@ -125,12 +126,13 @@ QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
         }
 
         // Optional per-item overrides; fall back to top-level defaults
-        gd.type    = jsonString(obj, "type",    defaults.type);
-        gd.urlData = jsonString(obj, "urldata", defaults.urlData);
-        gd.urlTm   = jsonString(obj, "utltm",   defaults.urlTm);
-        gd.urlInfo = jsonString(obj, "urlinfo",  defaults.urlInfo);
-        gd.comment = jsonString(obj, "comment");
-        gd.maxLod  = jsonInt   (obj, "maxLod",  defaults.maxLod);
+        gd.type        = jsonString(obj, "type",        defaults.type);
+        gd.urlData     = jsonString(obj, "urldata",     defaults.urlData);
+        gd.urlTm       = jsonString(obj, "utltm",       defaults.urlTm);
+        gd.urlInfo     = jsonString(obj, "urlinfo",     defaults.urlInfo);
+        gd.comment     = jsonString(obj, "comment");
+        gd.paletteName = jsonString(obj, "paletteName");
+        gd.maxLod      = jsonInt   (obj, "maxLod",      defaults.maxLod);
 
         gd.hasTiming = !gd.urlTm.isEmpty();
         gd.product   = gd.prodCode + QLatin1Char(':') + gd.prodName;

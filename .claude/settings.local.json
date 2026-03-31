@@ -20,7 +20,8 @@
       "Bash(find /opt/homebrew -name osm_mapping*)",
       "WebFetch(domain:doc.qt.io)",
       "Bash(find /opt/homebrew/Cellar/qtlocation -name *.h)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(ls:*)"
     ]
   }
 }

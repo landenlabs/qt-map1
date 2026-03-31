@@ -3,18 +3,14 @@
 // ─── UBO layout ──────────────────────────────────────────────────────────────
 // Must match shaders/floatgrid.vert and shaders/floatgrid.frag exactly.
 //
-//   offset  0 : mat4  qt_Matrix   64 bytes
-//   offset 64 : float qt_Opacity   4 bytes
-//   offset 68 : float dataMin      4 bytes
-//   offset 72 : float dataMax      4 bytes
-//   offset 76 : float _pad         4 bytes  (std140 tail-padding to reach 80)
+//   offset  0 : mat4  qt_Matrix    64 bytes
+//   offset 64 : float qt_Opacity    4 bytes
+//   offset 68 : float _pad[3]      12 bytes  (std140: UBO must be 16-byte multiple)
 //   total = 80 bytes
 
 namespace {
 constexpr int kMatrixOffset  =  0;
 constexpr int kOpacityOffset = 64;
-constexpr int kDataMinOffset = 68;
-constexpr int kDataMaxOffset = 72;
 constexpr int kUBOSize       = 80;
 } // namespace
 
@@ -31,10 +27,9 @@ FloatGridShader::FloatGridShader()
 }
 
 bool FloatGridShader::updateUniformData(RenderState &state,
-                                        QSGMaterial *newMat,
+                                        QSGMaterial * /*newMat*/,
                                         QSGMaterial * /*oldMat*/)
 {
-    auto       *mat = static_cast<FloatGridMaterial *>(newMat);
     QByteArray *buf = state.uniformData();
     Q_ASSERT(buf->size() >= kUBOSize);
 
@@ -51,11 +46,6 @@ bool FloatGridShader::updateUniformData(RenderState &state,
         changed = true;
     }
 
-    // Always upload custom uniforms; the material compare() drives batching.
-    memcpy(buf->data() + kDataMinOffset, &mat->dataMin, 4);
-    memcpy(buf->data() + kDataMaxOffset, &mat->dataMax, 4);
-    changed = true;
-
     return changed;
 }
 
@@ -65,13 +55,15 @@ void FloatGridShader::updateSampledImage(RenderState &state,
                                           QSGMaterial *newMat,
                                           QSGMaterial * /*oldMat*/)
 {
-    if (binding == 1) {
-        QSGTexture *tex = static_cast<FloatGridMaterial *>(newMat)->texture;
-        if (tex) {
-            // commitTextureOperations uploads pixel data to the GPU.
-            tex->commitTextureOperations(state.rhi(), state.resourceUpdateBatch());
-            *texture = tex;
-        }
+    auto *mat = static_cast<FloatGridMaterial *>(newMat);
+
+    if (binding == 1 && mat->texture) {
+        mat->texture->commitTextureOperations(state.rhi(), state.resourceUpdateBatch());
+        *texture = mat->texture;
+    }
+    if (binding == 2 && mat->paletteTexture) {
+        mat->paletteTexture->commitTextureOperations(state.rhi(), state.resourceUpdateBatch());
+        *texture = mat->paletteTexture;
     }
 }
 

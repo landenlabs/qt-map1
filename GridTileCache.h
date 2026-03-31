@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QCache>
+#include <QHash>
 #include <QImage>
 #include <QSet>
 #include <QString>
@@ -9,23 +10,17 @@
 
 class GridLoader;
 
-// GridTileCache – converts fetched float-grid tiles into QImages and keeps
-// previously loaded tiles in a two-level cache (memory + disk).
+// GridTileCache – converts fetched float-grid tiles into palette-indexed
+// Grayscale8 QImages and caches them in memory and on disk.
 //
-// Memory cache: QCache limited to maxMemBytes (default 64 MB).  Each entry
-//   costs image.sizeInBytes() bytes; Qt evicts the least-recently-used tile
-//   when the budget is exceeded.
+// Each pixel in the output image stores a pre-computed palette UV [0, 1]:
+//   uv = clamp((gridValue - paletteOffset) * paletteScale / (numSteps-1), 0, 1)
 //
-// Disk cache: PNG files written to
-//   QStandardPaths::CacheLocation/grid_tiles/<key>.png
-//   so tiles survive app restarts without re-fetching.
+// The UV is baked into the texture so the fragment shader needs only to sample
+// the palette strip — no per-pixel arithmetic at draw time.
 //
-// Usage:
-//   cache.requestTileImage(product, type, z, x, y)
-//   → tileImageReady(product, z, x, y, image)  emitted synchronously on a
-//     cache hit, or asynchronously after the two-stage network fetch.
-//   Duplicate in-flight requests for the same (product, z, x, y) are
-//   coalesced — only one network fetch is issued.
+// Memory cache: QCache limited to maxMemBytes (default 64 MB).
+// Disk cache:   grid_tiles_p1/<key>.png  (p1 = palette-indexed format version 1)
 
 class GridTileCache : public QObject
 {
@@ -37,10 +32,12 @@ public:
                            QObject *parent = nullptr);
 
     // Request the QImage for one tile.
-    // urlInfo / urlData – endpoint templates from grids.json (query string stripped
-    // internally); passed through to GridLoader::fetchTile on a cache miss.
+    // paletteScale / paletteOffset / numSteps – from the active palette;
+    //   used to encode the palette UV into the Grayscale8 output image.
+    // urlInfo / urlData – endpoint templates from grids.json.
     void requestTileImage(const QString &product, const QString &type,
-                          const QString &urlInfo, const QString &urlData,
+                          const QString &urlInfo,  const QString &urlData,
+                          float paletteScale, float paletteOffset, int numSteps,
                           int z, int x, int y);
 
     // Unique cache key string: "product:z:x:y" — public so callers can key textures.
@@ -53,24 +50,30 @@ signals:
                         const QString &message);
 
 private:
-    // Slots connected to the internal GridLoader
+    // Palette parameters stored per product so onTileReady can encode correctly.
+    struct PaletteParams {
+        float paletteScale;
+        float paletteOffset;
+        int   numSteps;
+    };
+
     void onTileReady(const QString &product, int x, int y, int z,
                      const QVector<QVector<float>> &grid);
     void onTileError(const QString &product, const QString &message);
 
-    // Convert a 2-D float grid to a normalised Grayscale8 QImage.
-    // Non-finite values (NaN, ±inf) are mapped to 0.
-    // Values are linearly scaled from [min, max] → [0, 255].
-    static QImage gridToImage(const QVector<QVector<float>> &grid);
+    // Encode a float grid as a Grayscale8 palette-UV image.
+    // Each pixel = clamp((v - offset) * scale / (numSteps-1), 0, 1) * 255.
+    // Non-finite values map to 0.
+    static QImage gridToImage(const QVector<QVector<float>> &grid,
+                              float paletteScale, float paletteOffset, int numSteps);
 
-    // Absolute path of the disk-cache file for this key.
     QString diskPath(const QString &key) const;
+    bool    loadFromDisk(const QString &key, QImage &out) const;
+    void    saveToDisk  (const QString &key, const QImage &image) const;
 
-    bool loadFromDisk(const QString &key, QImage &out) const;
-    void saveToDisk  (const QString &key, const QImage &image) const;
-
-    GridLoader               *m_loader;
-    QCache<QString, QImage>   m_memCache;    // key → image
-    QString                   m_diskCacheDir;
-    QSet<QString>             m_inFlight;    // keys with active network requests
+    GridLoader                   *m_loader;
+    QCache<QString, QImage>       m_memCache;
+    QString                       m_diskCacheDir;
+    QSet<QString>                 m_inFlight;
+    QHash<QString, PaletteParams> m_productPalette;  // product → palette params
 };

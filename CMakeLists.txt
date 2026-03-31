@@ -53,6 +53,8 @@ qt_add_executable(qt-map1
     GridManager.cpp
     GridTileCache.h
     GridTileCache.cpp
+    PaletteManager.h
+    PaletteManager.cpp
 )
 
 qt_add_qml_module(qt-map1
@@ -64,6 +66,12 @@ qt_add_qml_module(qt-map1
 
 # Compile GLSL shaders → .qsb (OpenGL/Vulkan/Metal cross-compiled by qsb)
 # Output resources: :/shaders/floatgrid.vert.qsb  :/shaders/floatgrid.frag.qsb
+qt_add_resources(qt-map1 "palette_data"
+    PREFIX "/data"
+    FILES
+        palettes.json
+)
+
 qt_add_shaders(qt-map1 "floatgrid_shaders"
     BATCHABLE          # rewrites vertex shader with _qt_order attribute for SG batching
     GLSL "440"

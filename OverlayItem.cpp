@@ -8,22 +8,22 @@
 #include <QQuickWindow>
 #include <cmath>
 
-// Special key used for the fallback test-grid texture (z > 2 or no product).
+// Special key used for the fallback test-grid texture (z > maxLod or no product).
 static const QString kTestKey = QStringLiteral("__test__");
 
 // ─── TileGridRootNode ─────────────────────────────────────────────────────────
 //
-// Owns all QSGTextures (one per tile key).  Child QSGGeometryNodes hold raw
-// non-owning pointers so the scene graph can delete them safely on the render
-// thread without touching textures.
+// Owns all QSGTextures: per-tile data textures keyed by tile key, and the
+// single shared palette strip.
 
 struct TileGridRootNode : public QSGNode {
-    // key → texture.  Entries accumulate; eviction is managed by GridTileCache.
-    QHash<QString, QSGTexture *> textures;
+    QHash<QString, QSGTexture *> textures;      // per-tile data textures
+    QSGTexture                  *paletteTexture = nullptr;  // shared palette strip
 
     ~TileGridRootNode() {
         for (QSGTexture *t : std::as_const(textures))
             delete t;
+        delete paletteTexture;
     }
 };
 
@@ -84,37 +84,30 @@ void OverlayItem::setEndpoint(const QString &url)
     emit endpointChanged();
 }
 
-float OverlayItem::dataMin() const { return m_dataMin; }
-void OverlayItem::setDataMin(float v)
-{
-    if (qFuzzyCompare(m_dataMin, v)) return;
-    m_dataMin = v;
-    m_rectsDirty = true;
-    emit dataMinChanged();
-    update();
-}
-
-float OverlayItem::dataMax() const { return m_dataMax; }
-void OverlayItem::setDataMax(float v)
-{
-    if (qFuzzyCompare(m_dataMax, v)) return;
-    m_dataMax = v;
-    m_rectsDirty = true;
-    emit dataMaxChanged();
-    update();
-}
-
 // ─── setGridProduct ───────────────────────────────────────────────────────────
 
 void OverlayItem::setGridProduct(const QString &product, const QString &type,
                                   int maxLod,
-                                  const QString &urlInfo, const QString &urlData)
+                                  const QString &urlInfo, const QString &urlData,
+                                  const QString &paletteName)
 {
     m_product     = product;
     m_productType = type;
     m_maxLod      = maxLod;
     m_urlInfo     = urlInfo;
     m_urlData     = urlData;
+
+    const PaletteManager::PaletteInfo *pal = m_paletteManager.palette(paletteName);
+    if (pal) {
+        m_paletteScale    = pal->scale;
+        m_paletteOffset   = pal->offset;
+        m_paletteNumSteps = pal->numSteps;
+        m_paletteImage    = pal->image;
+        m_paletteDirty    = true;
+        update();
+    } else {
+        qWarning("OverlayItem: palette '%s' not found", qPrintable(paletteName));
+    }
 }
 
 // ─── test ────────────────────────────────────────────────────────────────────
@@ -130,15 +123,14 @@ void OverlayItem::test()
 }
 
 // ─── drawTile ────────────────────────────────────────────────────────────────
-// Requests the image for a single tile.  For z ≤ 2 with a known product the
-// request goes through GridTileCache (async; onTileImageReady delivers result).
-// For z > 2 or no product a static test grid is stored immediately.
 
 void OverlayItem::drawTile(int z, int x, int y)
 {
     if (z <= m_maxLod && !m_product.isEmpty()) {
         m_tileCache->requestTileImage(m_product, m_productType,
-                                      m_urlInfo, m_urlData, z, x, y);
+                                      m_urlInfo, m_urlData,
+                                      m_paletteScale, m_paletteOffset, m_paletteNumSteps,
+                                      z, x, y);
     } else {
         m_pendingImages[kTestKey] = makeTestGrid(256, 256);
         m_imageDirty = true;
@@ -147,8 +139,6 @@ void OverlayItem::drawTile(int z, int x, int y)
 }
 
 // ─── onTileImageReady ─────────────────────────────────────────────────────────
-// Called by GridTileCache (on the GUI thread) when a tile image is ready.
-// Stores the image under its tile key; updatePaintNode uploads it to GPU.
 
 void OverlayItem::onTileImageReady(const QString &product, int z, int x, int y,
                                    const QImage &image)
@@ -160,11 +150,6 @@ void OverlayItem::onTileImageReady(const QString &product, int z, int x, int y,
 }
 
 // ─── setVisibleTiles ─────────────────────────────────────────────────────────
-// Called from QML after every pan/zoom.  Each element of `tiles` must be a
-// QVariantMap with keys: "z" (int), "x" (int), "y" (int), "rect" (QRectF).
-//
-// For each tile at z ≤ 2 with an active product a GridTileCache fetch is
-// triggered.  For z > 2 the fallback test texture is used.
 
 void OverlayItem::setVisibleTiles(const QVariantList &tiles)
 {
@@ -180,14 +165,13 @@ void OverlayItem::setVisibleTiles(const QVariantList &tiles)
         ti.y = m.value(QStringLiteral("y")).toInt();
         m_tileInfos.append(ti);
 
-        // Request tile data for lod levels the API supports (z ≤ 2).
         if (!m_product.isEmpty()) {
             if (ti.z <= m_maxLod) {
                 m_tileCache->requestTileImage(m_product, m_productType,
                                               m_urlInfo, m_urlData,
+                                              m_paletteScale, m_paletteOffset, m_paletteNumSteps,
                                               ti.z, ti.x, ti.y);
             } else if (!m_pendingImages.contains(kTestKey)) {
-                // Ensure the test texture exists for higher zoom levels.
                 m_pendingImages[kTestKey] = makeTestGrid(256, 256);
                 m_imageDirty = true;
             }
@@ -215,6 +199,7 @@ QImage OverlayItem::makeTestGrid(int w, int h)
             grid[row * w + col] = v;
         }
     }
+    // Test grid values are already [0,1]; store directly as palette UV.
     QImage img(w, h, QImage::Format_Grayscale8);
     for (int row = 0; row < h; ++row) {
         uchar *line = img.scanLine(row);
@@ -232,13 +217,11 @@ void OverlayItem::onMapViewportChanged()
 }
 
 // ─── Scene-graph rendering ───────────────────────────────────────────────────
-// Called on the render thread while the GUI thread is blocked (SG sync phase).
 //
 // Node tree:
-//   TileGridRootNode              owns QHash<key, QSGTexture*>
-//     QSGGeometryNode [tile 0]    material → raw non-owning texture ptr
-//     QSGGeometryNode [tile 1]    material → raw non-owning texture ptr
-//     ...
+//   TileGridRootNode              owns QHash<key, QSGTexture*> + paletteTexture
+//     QSGGeometryNode [tile 0]    material → non-owning data + palette texture ptrs
+//     QSGGeometryNode [tile 1]    ...
 
 QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
 {
@@ -250,11 +233,23 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
     auto *root = static_cast<TileGridRootNode *>(oldNode);
     if (!root) {
         root = new TileGridRootNode;
-        m_imageDirty = true;
-        m_rectsDirty = true;
+        m_imageDirty   = true;
+        m_rectsDirty   = true;
+        m_paletteDirty = true;
     }
 
-    // ── Upload any pending images to GPU textures ────────────────────────────
+    // ── Upload palette strip texture if it changed ───────────────────────────
+    if (m_paletteDirty && !m_paletteImage.isNull()) {
+        delete root->paletteTexture;
+        root->paletteTexture = window()->createTextureFromImage(m_paletteImage);
+        root->paletteTexture->setFiltering(QSGTexture::Linear);
+        root->paletteTexture->setHorizontalWrapMode(QSGTexture::ClampToEdge);
+        root->paletteTexture->setVerticalWrapMode(QSGTexture::ClampToEdge);
+        m_paletteDirty = false;
+        m_rectsDirty   = true;
+    }
+
+    // ── Upload any pending data images to GPU textures ───────────────────────
     if (m_imageDirty) {
         for (auto it = m_pendingImages.cbegin(); it != m_pendingImages.cend(); ++it) {
             QSGTexture *tex = window()->createTextureFromImage(it.value());
@@ -262,7 +257,6 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
             tex->setHorizontalWrapMode(QSGTexture::ClampToEdge);
             tex->setVerticalWrapMode(QSGTexture::ClampToEdge);
 
-            // Replace any existing texture for this key.
             delete root->textures.value(it.key(), nullptr);
             root->textures[it.key()] = tex;
         }
@@ -273,7 +267,6 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
 
     // ── Rebuild geometry nodes when tile layout or textures changed ──────────
     if (m_rectsDirty) {
-        // Remove all existing child nodes (materials/geometries are owned).
         QSGNode *child = root->firstChild();
         while (child) {
             QSGNode *next = child->nextSibling();
@@ -283,18 +276,15 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
         }
 
         for (const TileInfo &ti : std::as_const(m_tileInfos)) {
-            // Pick the best available texture for this tile.
             const QString key = m_product.isEmpty()
                 ? kTestKey
                 : GridTileCache::tileKey(m_product, ti.z, ti.x, ti.y);
 
             QSGTexture *tex = root->textures.value(key, nullptr);
-            if (!tex) {
-                // Fall back to the test texture if the live tile isn't ready yet.
-                tex = root->textures.value(kTestKey, nullptr);
-            }
             if (!tex)
-                continue;   // nothing to show for this tile yet
+                tex = root->textures.value(kTestKey, nullptr);
+            if (!tex)
+                continue;
 
             const float x0 = float(ti.screenRect.left());
             const float y0 = float(ti.screenRect.top());
@@ -311,9 +301,8 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
             vp[3].set(x1, y1, 1.f, 1.f);
 
             auto *mat = new FloatGridMaterial;
-            mat->texture = tex;   // non-owning
-            mat->dataMin = m_dataMin;
-            mat->dataMax = m_dataMax;
+            mat->texture        = tex;                   // non-owning
+            mat->paletteTexture = root->paletteTexture;  // non-owning
 
             auto *node = new QSGGeometryNode;
             node->setGeometry(geo);

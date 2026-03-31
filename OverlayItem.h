@@ -1,5 +1,7 @@
 #pragma once
 
+#include "PaletteManager.h"
+
 #include <QHash>
 #include <QImage>
 #include <QNetworkAccessManager>
@@ -11,18 +13,17 @@
 class GridLoader;
 class GridTileCache;
 
-// OverlayItem – a transparent QQuickItem that renders per-tile floating-point
-// data grids with an OpenGL/RHI fragment shader (viridis colormap).
+// OverlayItem – transparent QQuickItem that renders per-tile float-grid data
+// using the floatgrid RHI shaders and a per-palette colour strip.
 //
-// Rendering is driven by two independent inputs:
-//   1. setVisibleTiles() — called on every pan/zoom; carries screen-space rects
-//      AND tile coordinates (z,x,y).  For z ≤ 2 with an active product it also
-//      triggers a GridTileCache fetch so each tile gets its own texture.
-//   2. drawTile()        — requests a single tile image (initial load or test).
-//
-// Per-tile textures: TileGridRootNode holds a QHash<key, QSGTexture> so each
-// visible tile quad can display independent data.  Tiles whose texture has not
-// yet arrived are skipped; they appear as soon as onTileImageReady fires.
+// Data flow:
+//   1. setGridProduct()  — stores product, URL templates, and palette info.
+//                          Looks up the named palette in PaletteManager and
+//                          marks the palette texture as dirty.
+//   2. setVisibleTiles() — called on every pan/zoom; fires tile fetches and
+//                          calls update() so the scene graph re-renders.
+//   3. updatePaintNode() — uploads pending data textures and (if dirty) the
+//                          palette strip texture; rebuilds geometry nodes.
 
 class OverlayItem : public QQuickItem
 {
@@ -30,11 +31,8 @@ class OverlayItem : public QQuickItem
 
     Q_PROPERTY(QObject *mapItem  READ mapItem  WRITE setMapItem  NOTIFY mapItemChanged)
     Q_PROPERTY(QString  endpoint READ endpoint WRITE setEndpoint NOTIFY endpointChanged)
-    Q_PROPERTY(float    dataMin  READ dataMin  WRITE setDataMin  NOTIFY dataMinChanged)
-    Q_PROPERTY(float    dataMax  READ dataMax  WRITE setDataMax  NOTIFY dataMaxChanged)
 
 public:
-    // Tile descriptor: screen-space rect + tile grid coordinates.
     struct TileInfo {
         QRectF screenRect;
         int    z, x, y;
@@ -45,34 +43,21 @@ public:
 
     QObject *mapItem()  const;  void setMapItem(QObject *item);
     QString  endpoint() const;  void setEndpoint(const QString &url);
-    float    dataMin()  const;  void setDataMin(float v);
-    float    dataMax()  const;  void setDataMax(float v);
 
-    // Request a tile image.
-    // z ≤ 2 with an active product → fetched via GridTileCache.
-    // Otherwise → static test grid.
     Q_INVOKABLE void drawTile(int z, int x, int y);
-
-    // Fire a test fetchTile() request via the embedded GridLoader.
     Q_INVOKABLE void test();
 
-    // Set the active product, type, URL templates, and maximum supported lod for
-    // live tile fetching.  Call from QML whenever the active grid changes.
+    // Set the active product, URL templates, and palette for live tile fetching.
     Q_INVOKABLE void setGridProduct(const QString &product, const QString &type,
                                     int maxLod,
-                                    const QString &urlInfo, const QString &urlData);
+                                    const QString &urlInfo, const QString &urlData,
+                                    const QString &paletteName);
 
-    // Pass screen-space info for every currently-visible tile.
-    // Each QVariant must be a QVariantMap with keys:
-    //   "z" (int), "x" (int), "y" (int), "rect" (QRectF / Qt.rect)
-    // Called from QML after each pan/zoom; also triggers tile fetches.
     Q_INVOKABLE void setVisibleTiles(const QVariantList &tiles);
 
 signals:
     void mapItemChanged();
     void endpointChanged();
-    void dataMinChanged();
-    void dataMaxChanged();
 
 protected:
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *data) override;
@@ -84,29 +69,35 @@ private slots:
 
 private:
     static QImage makeTestGrid(int w, int h);
-
-    // Called by GridTileCache when a tile image is ready.
     void onTileImageReady(const QString &product, int z, int x, int y,
                           const QImage &image);
 
     QObject *m_mapItem  = nullptr;
     QString  m_endpoint;
-    float    m_dataMin  = 0.0f;
-    float    m_dataMax  = 1.0f;
 
-    // GUI-thread state handed to the render thread during SG sync.
-    // m_pendingImages: new images to upload to GPU textures, keyed by tile key.
     QHash<QString, QImage> m_pendingImages;
-    QVector<TileInfo>      m_tileInfos;      // current visible tiles
-    bool                   m_imageDirty = false;
-    bool                   m_rectsDirty = false;
+    QVector<TileInfo>      m_tileInfos;
+    bool                   m_imageDirty   = false;
+    bool                   m_rectsDirty   = false;
+
+    // Palette strip — set by setGridProduct(), uploaded to GPU in updatePaintNode().
+    QImage m_paletteImage;
+    bool   m_paletteDirty  = false;
 
     QNetworkAccessManager m_network;
-    GridLoader           *m_gridLoader  = nullptr;
-    GridTileCache        *m_tileCache   = nullptr;
-    QString               m_product;
-    QString               m_productType;
-    QString               m_urlInfo;
-    QString               m_urlData;
-    int                   m_maxLod = 2;
+    GridLoader           *m_gridLoader    = nullptr;
+    GridTileCache        *m_tileCache     = nullptr;
+
+    QString m_product;
+    QString m_productType;
+    QString m_urlInfo;
+    QString m_urlData;
+    int     m_maxLod        = 2;
+
+    // Palette encoding coefficients (from PaletteManager::PaletteInfo).
+    float   m_paletteScale  = 1.0f;
+    float   m_paletteOffset = 0.0f;
+    int     m_paletteNumSteps = 2;
+
+    PaletteManager m_paletteManager;
 };

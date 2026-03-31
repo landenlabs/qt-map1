@@ -29,9 +29,15 @@ public:
 
 // ─── FloatGridMaterial ───────────────────────────────────────────────────────
 //
-// One material instance per rendered tile.  Owns the QSGTexture that backs
-// the float grid data and exposes the scalar range [dataMin, dataMax] that
-// the fragment shader uses to normalise values before colour-mapping.
+// One material instance per rendered tile.
+//
+// texture        – Grayscale8 tile data; each pixel stores a pre-computed
+//                  palette UV [0,1] derived from the raw float grid value via
+//                  uv = clamp((v - offset) * scale / (numSteps-1), 0, 1).
+//                  Owned by TileGridRootNode in OverlayItem.cpp.
+//
+// paletteTexture – 256×1 RGBA8888 colour strip pre-baked by PaletteManager.
+//                  Shared across all tiles; owned by TileGridRootNode.
 
 class FloatGridMaterial : public QSGMaterial
 {
@@ -44,8 +50,6 @@ public:
     // Used by the scene graph to decide whether two draw calls can be batched.
     int compare(const QSGMaterial *other) const override;
 
-    // Non-owning pointer — texture is owned by TileGridRootNode in OverlayItem.cpp
-    QSGTexture *texture = nullptr;
-    float dataMin = 0.0f;
-    float dataMax = 1.0f;
+    QSGTexture *texture        = nullptr;  // non-owning, per-tile data
+    QSGTexture *paletteTexture = nullptr;  // non-owning, shared palette strip
 };

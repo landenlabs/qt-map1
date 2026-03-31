@@ -252,8 +252,6 @@ ApplicationWindow {
                     anchors.fill: parent
                     mapItem: map
                     endpoint: ""
-                    dataMin: 0.0
-                    dataMax: 1.0
                     opacity: 0.75
                     visible: false
                 }
@@ -635,7 +633,7 @@ ApplicationWindow {
                     if (gridManager.grids.length > 0) {
                         var g = gridManager.grids[0]
                         overlay.setGridProduct(g.product, g.type, g.maxLod,
-                                               g.urlInfo, g.urlData)
+                                               g.urlInfo, g.urlData, g.paletteName)
                     }
                     overlay.test()
                 }
@@ -828,7 +826,7 @@ ApplicationWindow {
             // Tell the overlay which product and URLs are active
             var grid = gridManager.grids[index]
             overlay.setGridProduct(grid.product, grid.type, grid.maxLod,
-                                   grid.urlInfo, grid.urlData)
+                                   grid.urlInfo, grid.urlData, grid.paletteName)
             overlay.drawTile(0, 0, 0)
             updateOverlayTiles()
             overlay.visible = true

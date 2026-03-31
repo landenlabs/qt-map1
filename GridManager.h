@@ -41,7 +41,8 @@ public:
         QString urlData;    // tile data template
         QString urlTm;      // timing info template (may be empty)
         QString urlInfo;    // metadata info template (may be empty)
-        QString comment;    // human-readable description / notes
+        QString comment;      // human-readable description / notes
+        QString paletteName;  // key into palettes.json (empty = no palette)
         bool    hasTiming = false;
         int     maxLod    = 2;
     };

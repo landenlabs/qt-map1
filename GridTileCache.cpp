@@ -6,7 +6,6 @@
 #include <QStandardPaths>
 #include <algorithm>
 #include <cmath>
-#include <limits>
 
 // ─── Construction ─────────────────────────────────────────────────────────────
 
@@ -17,8 +16,10 @@ GridTileCache::GridTileCache(const QString &apiKey,
     , m_loader(new GridLoader(apiKey, this))
     , m_memCache(maxMemBytes)
 {
+    // "p1" suffix = palette-indexed format v1; prevents stale per-tile-min/max
+    // normalised tiles from being read by the new palette-UV encoding.
     m_diskCacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation)
-                   + QStringLiteral("/grid_tiles");
+                   + QStringLiteral("/grid_tiles_p1");
     QDir().mkpath(m_diskCacheDir);
     qInfo("GridTileCache: disk cache → %s", qPrintable(m_diskCacheDir));
 
@@ -31,14 +32,19 @@ GridTileCache::GridTileCache(const QString &apiKey,
 // ─── requestTileImage ─────────────────────────────────────────────────────────
 
 void GridTileCache::requestTileImage(const QString &product, const QString &type,
-                                     const QString &urlInfo, const QString &urlData,
+                                     const QString &urlInfo,  const QString &urlData,
+                                     float paletteScale, float paletteOffset, int numSteps,
                                      int z, int x, int y)
 {
     const QString key = tileKey(product, z, x, y);
 
+    // Always refresh the palette params for this product (may change if user
+    // switches palette mid-session).
+    m_productPalette[product] = PaletteParams{ paletteScale, paletteOffset, numSteps };
+
     // 1. Memory cache hit
     if (QImage *cached = m_memCache[key]) {
-        qInfo("GridTileCache: mem-cache hit  %s", qPrintable(key));
+        // qInfo("GridTileCache: mem-cache hit  %s", qPrintable(key));
         emit tileImageReady(product, z, x, y, *cached);
         return;
     }
@@ -46,7 +52,7 @@ void GridTileCache::requestTileImage(const QString &product, const QString &type
     // 2. Disk cache hit
     QImage diskImg;
     if (loadFromDisk(key, diskImg)) {
-        qInfo("GridTileCache: disk-cache hit %s", qPrintable(key));
+        // qInfo("GridTileCache: disk-cache hit %s", qPrintable(key));
         m_memCache.insert(key, new QImage(diskImg),
                           static_cast<qsizetype>(diskImg.sizeInBytes()));
         emit tileImageReady(product, z, x, y, diskImg);
@@ -72,7 +78,11 @@ void GridTileCache::onTileReady(const QString &product, int x, int y, int z,
     const QString key = tileKey(product, z, x, y);
     m_inFlight.remove(key);
 
-    const QImage img = gridToImage(grid);
+    // Retrieve palette params stored when the request was originally made.
+    const PaletteParams pp = m_productPalette.value(
+        product, PaletteParams{ 1.0f, 0.0f, 2 });
+
+    const QImage img = gridToImage(grid, pp.paletteScale, pp.paletteOffset, pp.numSteps);
     if (img.isNull()) {
         emit tileImageError(product, z, x, y,
                             QStringLiteral("gridToImage produced null image"));
@@ -88,9 +98,6 @@ void GridTileCache::onTileReady(const QString &product, int x, int y, int z,
 }
 
 // ─── onTileError ─────────────────────────────────────────────────────────────
-// GridLoader::tileError only carries product + message (not x/y/z).
-// Find all in-flight keys for this product, parse their coordinates, and
-// emit a tileImageError for each.
 
 void GridTileCache::onTileError(const QString &product, const QString &message)
 {
@@ -102,7 +109,6 @@ void GridTileCache::onTileError(const QString &product, const QString &message)
 
     for (const QString &key : toRemove) {
         m_inFlight.remove(key);
-        // key format: "product:z:x:y"
         const QStringList parts = key.mid(prefix.length()).split(QLatin1Char(':'));
         if (parts.size() == 3)
             emit tileImageError(product,
@@ -114,29 +120,21 @@ void GridTileCache::onTileError(const QString &product, const QString &message)
 }
 
 // ─── gridToImage ─────────────────────────────────────────────────────────────
-// Normalise the float grid to [0,255] using per-tile min/max.
-// Non-finite values (NaN, ±inf / missing_value) map to 0 (black).
+// Encodes each float value as a palette UV [0, 1] stored in Grayscale8.
+// The fragment shader samples the palette strip texture using this UV directly.
+//
+// Encoding:  uv = clamp((v - offset) * scale / (numSteps - 1), 0, 1)
+// Non-finite values (NaN, ±inf) map to 0.
 
-QImage GridTileCache::gridToImage(const QVector<QVector<float>> &grid)
+QImage GridTileCache::gridToImage(const QVector<QVector<float>> &grid,
+                                   float paletteScale, float paletteOffset, int numSteps)
 {
     if (grid.isEmpty() || grid[0].isEmpty())
         return QImage();
 
-    const int rows = grid.size();
-    const int cols = grid[0].size();
-
-    float minVal =  std::numeric_limits<float>::max();
-    float maxVal = -std::numeric_limits<float>::max();
-    for (const auto &row : grid)
-        for (float v : row)
-            if (std::isfinite(v)) {
-                if (v < minVal) minVal = v;
-                if (v > maxVal) maxVal = v;
-            }
-
-    if (minVal >= maxVal)
-        maxVal = minVal + 1.0f;   // degenerate tile: constant value
-    const float range = maxVal - minVal;
+    const int   rows      = grid.size();
+    const int   cols      = grid[0].size();
+    const float stepRange = float(std::max(numSteps - 1, 1));
 
     QImage img(cols, rows, QImage::Format_Grayscale8);
     for (int r = 0; r < rows; ++r) {
@@ -146,8 +144,9 @@ QImage GridTileCache::gridToImage(const QVector<QVector<float>> &grid)
             if (!std::isfinite(v)) {
                 line[c] = 0;
             } else {
-                const float n = std::clamp((v - minVal) / range, 0.0f, 1.0f);
-                line[c] = static_cast<uchar>(n * 255.0f + 0.5f);
+                const float idx = (v - paletteOffset) * paletteScale;
+                const float uv  = std::clamp(idx / stepRange, 0.0f, 1.0f);
+                line[c] = static_cast<uchar>(uv * 255.0f + 0.5f);
             }
         }
     }
@@ -167,7 +166,6 @@ QString GridTileCache::tileKey(const QString &product, int z, int x, int y)
 QString GridTileCache::diskPath(const QString &key) const
 {
     QString safe = key;
-    // Sanitise characters that are unsafe in filenames
     safe.replace(QLatin1Char(':'),  QLatin1Char('_'))
         .replace(QLatin1Char('/'),  QLatin1Char('_'))
         .replace(QLatin1Char('\\'), QLatin1Char('_'));
