@@ -4,6 +4,8 @@
 #include <QSGMaterialShader>
 #include <QSGTexture>
 #include <QObject>
+#include <QHash>
+#include <QList>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QString>
@@ -44,12 +46,15 @@ public:
 //
 //   Stage 1 (fetchTile):      GET tiler/info?products=…&apiKey=…&meta=true
 //                              → parse layers JSON
-//                              → extract rt[0] and t[0] from dimensions[0]
-//   Stage 2 (handleInfoReply): GET tiler/data?products=…&rt=…&t=…&lod=…&x=…&y=…
+//                              → extract rt[0] and ALL t values from dimensions[0]
+//                              → select t closest to now that is in the future
+//                              → cache ProductInfo in m_infoCache (once per product)
+//   Stage 2 (startTileFetch): GET tiler/data?products=…&rt=…&t=…&lod=…&x=…&y=…
 //                              → read raw bytes
 //                              → unpack big-endian float4 → 2-D grid
 //
-// Endpoint URLs are sourced per-call from grids.json via fetchTile().
+// The stage-1 network fetch is skipped on subsequent calls for the same product
+// (m_infoCache hit).  Endpoint URLs are sourced from grids.json via fetchTile().
 
 class GridLoader : public QObject, public QSGMaterial
 {
@@ -91,6 +96,12 @@ signals:
     void tileError(const QString &product, const QString &message);
 
 private:
+    // Cached product metadata from a stage-1 info response.
+    struct ProductInfo {
+        QString       rt;       // reference-time value (used as-is in tile URL)
+        QList<qint64> tValues;  // all epoch-second timestamps from dimensions[0]["t"]
+    };
+
     // State carried across the two async hops.
     struct PendingTile {
         QString product;   // "prodCode:prodName"
@@ -102,13 +113,22 @@ private:
     // Stage-1 reply handler – mirrors load_product_info JSON navigation.
     void handleInfoReply(QNetworkReply *reply, const PendingTile &pending);
 
+    // Stage-2 request – issued after stage-1 (or directly from cache).
+    // t is the epoch-second timestamp selected by selectT().
+    void startTileFetch(const PendingTile &pending, const QString &rt, qint64 t);
+
     // Stage-2 reply handler – mirrors make_binary_request + float4 unpack.
     void handleTileReply(QNetworkReply *reply, const PendingTile &pending);
+
+    // Select the t value closest to now that is in the future.
+    // Falls back to the most recent past value if all t values are in the past.
+    static qint64 selectT(const QList<qint64> &tValues);
 
     // Unpack big-endian float4 bytes into a square 2-D grid.
     // Mirrors: struct.unpack(f'>{n}f', data) reshaped to [side][side].
     static QVector<QVector<float>> parseFloat4(const QByteArray &data);
 
-    QString               m_apiKey;
-    QNetworkAccessManager m_network;
+    QString                     m_apiKey;
+    QNetworkAccessManager       m_network;
+    QHash<QString, ProductInfo> m_infoCache;  // product → cached stage-1 data
 };

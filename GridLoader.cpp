@@ -1,5 +1,6 @@
 #include "GridLoader.h"
 
+#include <QDateTime>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -112,7 +113,8 @@ int GridLoader::compare(const QSGMaterial *other) const
 }
 
 // ─── fetchTile ────────────────────────────────────────────────────────────────
-// Mirrors Python fetch_tile(): kicks off stage-1 (info) fetch.
+// Entry point. Checks m_infoCache first; if the product info is already known
+// the stage-1 network request is skipped entirely.
 
 void GridLoader::fetchTile(const QString &product,
                             const QString &type,
@@ -120,8 +122,19 @@ void GridLoader::fetchTile(const QString &product,
                             const QString &urlData,
                             int x, int y, int z)
 {
-    // Stage 1: load_product_info – GET tiler/info with meta=true.
-    // Strip any query string from the template; we build the query ourselves.
+    const PendingTile pending{ product, type, urlData, x, y, z };
+
+    // ── Cache hit: skip stage-1 ───────────────────────────────────────────────
+    auto it = m_infoCache.constFind(product);
+    if (it != m_infoCache.constEnd()) {
+        const qint64 t = selectT(it->tValues);
+        qInfo("GridLoader: info cache hit '%s' tile %d,%d,%d  t=%lld",
+              qPrintable(product), x, y, z, static_cast<long long>(t));
+        startTileFetch(pending, it->rt, t);
+        return;
+    }
+
+    // ── Cache miss: stage-1 info fetch ───────────────────────────────────────
     QUrlQuery query;
     query.addQueryItem(QStringLiteral("products"), product);
     query.addQueryItem(QStringLiteral("apiKey"),   m_apiKey);
@@ -135,8 +148,6 @@ void GridLoader::fetchTile(const QString &product,
     req.setRawHeader("Accept", "application/json");
 
     QNetworkReply *reply = m_network.get(req);
-
-    const PendingTile pending{ product, type, urlData, x, y, z };
     connect(reply, &QNetworkReply::finished, this, [this, reply, pending]() {
         handleInfoReply(reply, pending);
         reply->deleteLater();
@@ -206,7 +217,7 @@ void GridLoader::handleInfoReply(QNetworkReply *reply,
     // Mirrors: dimensions = prod_entry.get("dimensions", [])
     //          first_dim  = dimensions[0]
     //          rt = first_dim["rt"][0]
-    //          t  = first_dim["t"][0]
+    //          t  = ALL values from first_dim["t"]
     const QJsonArray  dimensions = prodEntry.value(QStringLiteral("dimensions")).toArray();
     if (dimensions.isEmpty()) {
         emit tileError(pending.product,
@@ -216,14 +227,31 @@ void GridLoader::handleInfoReply(QNetworkReply *reply,
     const QJsonObject firstDim = dimensions.first().toObject();
     const QString rt = firstDim.value(QStringLiteral("rt")).toArray()
                                 .first().toString();
-    const QString t  = firstDim.value(QStringLiteral("t")).toArray()
-                                .first().toString();
+
+    // Extract ALL t timestamps and select the one closest to now in the future.
+    const QJsonArray tArray = firstDim.value(QStringLiteral("t")).toArray();
+    QList<qint64> tValues;
+    tValues.reserve(tArray.size());
+    for (const QJsonValue &v : tArray) {
+        const qint64 ts = v.toString().toLongLong();
+        if (ts > 0) tValues.append(ts);
+    }
+    if (tValues.isEmpty()) {
+        emit tileError(pending.product,
+            QStringLiteral("No 't' timestamps for ") + pending.product);
+        return;
+    }
+    const qint64 selectedT = selectT(tValues);
+
+    // Cache for subsequent tile requests with the same product.
+    m_infoCache.insert(pending.product, ProductInfo{ rt, tValues });
 
     // Mirrors: meta logging
     const QJsonObject meta  = prodEntry.value(QStringLiteral("meta")).toObject();
     const QJsonObject attrs = meta.value(QStringLiteral("attributes")).toObject();
-    qInfo("GridLoader: Info product=%s  rt=%s  t=%s",
-          qPrintable(pending.product), qPrintable(rt), qPrintable(t));
+    qInfo("GridLoader: info product=%s  rt=%s  t-count=%d  selected-t=%lld",
+          qPrintable(pending.product), qPrintable(rt),
+          tValues.size(), static_cast<long long>(selectedT));
     qInfo("  description=%s  dataType=%s  units=%s  missing=%s",
           qPrintable(meta.value(QStringLiteral("description")).toString()),
           qPrintable(meta.value(QStringLiteral("dataType")).toString()),
@@ -252,13 +280,46 @@ void GridLoader::handleInfoReply(QNetworkReply *reply,
         qInfo("  Web Mercator tileset not found in meta");
     }
 
-    // Stage 2: make_binary_request – build tile URL and fetch raw bytes.
-    // Mirrors: tile_url = SUN_DATA_URL + f"?products={product}&rt={rt}&t={t}
-    //                       &lod={z}&x={x}&y={y}&apiKey={api_key}"
+    startTileFetch(pending, rt, selectedT);
+}
+
+// ─── selectT ─────────────────────────────────────────────────────────────────
+// Returns the epoch-second timestamp from tValues that is closest to now and
+// still in the future.  If all values are in the past, returns the most recent
+// past value instead.
+
+qint64 GridLoader::selectT(const QList<qint64> &tValues)
+{
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+
+    // Nearest future value (smallest t >= now).
+    qint64 best = -1;
+    for (qint64 t : tValues) {
+        if (t >= now && (best < 0 || t < best))
+            best = t;
+    }
+    if (best >= 0)
+        return best;
+
+    // All in the past — pick the most recent.
+    for (qint64 t : tValues) {
+        if (best < 0 || t > best)
+            best = t;
+    }
+    return best;
+}
+
+// ─── startTileFetch ───────────────────────────────────────────────────────────
+// Stage-2: builds the tile data URL and fires the network request.
+// Called either directly from the cache path or at the end of handleInfoReply.
+
+void GridLoader::startTileFetch(const PendingTile &pending,
+                                 const QString &rt, qint64 t)
+{
     QUrlQuery query;
     query.addQueryItem(QStringLiteral("products"), pending.product);
     query.addQueryItem(QStringLiteral("rt"),       rt);
-    query.addQueryItem(QStringLiteral("t"),        t);
+    query.addQueryItem(QStringLiteral("t"),        QString::number(t));
     query.addQueryItem(QStringLiteral("lod"),      QString::number(pending.z));
     query.addQueryItem(QStringLiteral("x"),        QString::number(pending.x));
     query.addQueryItem(QStringLiteral("y"),        QString::number(pending.y));
@@ -270,9 +331,8 @@ void GridLoader::handleInfoReply(QNetworkReply *reply,
     QNetworkRequest tileReq(tileUrl);
     tileReq.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("qt-map1/1.0"));
     tileReq.setRawHeader("Accept", "application/octet-stream");
-    // Request uncompressed data: Qt sends Accept-Encoding:gzip by default,
-    // which would silently corrupt the raw binary float4 payload if the server
-    // honours it, and can also cause the server to return 406.
+    // Disable gzip: Qt adds Accept-Encoding:gzip by default, which would silently
+    // corrupt the raw binary float4 payload and can cause a 406 response.
     tileReq.setRawHeader("Accept-Encoding", "identity");
 
     QNetworkReply *tileReply = m_network.get(tileReq);
@@ -281,8 +341,9 @@ void GridLoader::handleInfoReply(QNetworkReply *reply,
         tileReply->deleteLater();
     });
 
-    qInfo("GridLoader: fetching tile %d,%d,%d for '%s'",
-          pending.x, pending.y, pending.z, qPrintable(pending.product));
+    qInfo("GridLoader: fetching tile %d,%d,%d for '%s'  t=%lld",
+          pending.x, pending.y, pending.z, qPrintable(pending.product),
+          static_cast<long long>(t));
 }
 
 // ─── handleTileReply ──────────────────────────────────────────────────────────
