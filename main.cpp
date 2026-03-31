@@ -1,3 +1,4 @@
+#include <QDir>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -52,6 +53,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("appVersion", QLatin1String(kAppVersion));
     engine.rootContext()->setContextProperty("buildDate",  QLatin1String(kBuildDate));
     engine.rootContext()->setContextProperty("appUrl",     QLatin1String(kAppUrl));
+    engine.rootContext()->setContextProperty("homePath",   QDir::homePath());
 
     Logger logger;
     gLogger = &logger;

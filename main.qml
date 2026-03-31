@@ -532,13 +532,25 @@ ApplicationWindow {
                                     text: "If old watermarked tiles appear after changing the tile " +
                                           "provider, clear the disk cache:"
                                 }
-                                Text {
+                                RowLayout {
                                     width: parent.width
-                                    wrapMode: Text.WrapAnywhere
-                                    font.pixelSize: 12
-                                    font.family: "monospace"
-                                    color: "#222222"
-                                    text: "~/Library/Caches/QtLocation/5.8/tiles/osm/"
+                                    spacing: 6
+                                    Text {
+                                        Layout.fillWidth: true
+                                        wrapMode: Text.WrapAnywhere
+                                        font.pixelSize: 12
+                                        font.family: "monospace"
+                                        color: "#222222"
+                                        text: "~/Library/Caches/QtLocation/5.8/tiles/osm/"
+                                    }
+                                    Button {
+                                        text: "Open"
+                                        Layout.preferredHeight: 26
+                                        font.pixelSize: 11
+                                        onClicked: Qt.openUrlExternally(
+                                            "file://" + homePath +
+                                            "/Library/Caches/QtLocation/5.8/tiles/osm/")
+                                    }
                                 }
                                 Rectangle { width: parent.width; height: 1; color: "#cccccc" }
                                 Text {
@@ -650,54 +662,6 @@ ApplicationWindow {
                                 rightPadding: 20
                                 spacing: 10
 
-                                // ── Base Map ──────────────────────────────
-                                Text {
-                                    width: parent.width
-                                    font.pixelSize: 13
-                                    font.bold: true
-                                    text: "Base Map Tile Server"
-                                }
-                                Text {
-                                    width: parent.width
-                                    wrapMode: Text.WordWrap
-                                    font.pixelSize: 12
-                                    color: "#444444"
-                                    text: "Full tile URL template. Use %z, %x, %y for zoom and " +
-                                          "tile coordinates. Changes take effect after restarting."
-                                }
-                                TextField {
-                                    id: tileUrlField
-                                    width: parent.width
-                                    text: appSettings.tileUrl
-                                    font.pixelSize: 11
-                                    font.family: "monospace"
-                                    placeholderText: "https://tile.openstreetmap.org/%z/%x/%y.png"
-                                }
-                                Row {
-                                    spacing: 6
-                                    Button {
-                                        text: "Save"
-                                        height: 26
-                                        font.pixelSize: 11
-                                        enabled: tileUrlField.text.trim() !== "" &&
-                                                 tileUrlField.text !== appSettings.tileUrl
-                                        onClicked: {
-                                            appSettings.setTileUrl(tileUrlField.text.trim())
-                                            appLogger.append("Tile URL saved — restart to apply")
-                                        }
-                                    }
-                                    Button {
-                                        text: "Reset"
-                                        height: 26
-                                        font.pixelSize: 11
-                                        onClicked: {
-                                            tileUrlField.text = appSettings.defaultTileUrl()
-                                        }
-                                    }
-                                }
-
-                                Rectangle { width: parent.width; height: 1; color: "#cccccc" }
-
                                 // ── Weather Data ──────────────────────────
                                 Text {
                                     width: parent.width
@@ -770,6 +734,54 @@ ApplicationWindow {
                                              : "Built-in key — " + appSettings.daysRemaining +
                                                " day" + (appSettings.daysRemaining !== 1 ? "s" : "") +
                                                " remaining")
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: "#cccccc" }
+
+                                // ── Base Map ──────────────────────────────
+                                Text {
+                                    width: parent.width
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                    text: "Base Map Tile Server"
+                                }
+                                Text {
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: 12
+                                    color: "#444444"
+                                    text: "Full tile URL template. Use %z, %x, %y for zoom and " +
+                                          "tile coordinates. Changes take effect after restarting."
+                                }
+                                TextField {
+                                    id: tileUrlField
+                                    width: parent.width
+                                    text: appSettings.tileUrl
+                                    font.pixelSize: 11
+                                    font.family: "monospace"
+                                    placeholderText: "https://tile.openstreetmap.org/%z/%x/%y.png"
+                                }
+                                Row {
+                                    spacing: 6
+                                    Button {
+                                        text: "Save"
+                                        height: 26
+                                        font.pixelSize: 11
+                                        enabled: tileUrlField.text.trim() !== "" &&
+                                                 tileUrlField.text !== appSettings.tileUrl
+                                        onClicked: {
+                                            appSettings.setTileUrl(tileUrlField.text.trim())
+                                            appLogger.append("Tile URL saved — restart to apply")
+                                        }
+                                    }
+                                    Button {
+                                        text: "Reset"
+                                        height: 26
+                                        font.pixelSize: 11
+                                        onClicked: {
+                                            tileUrlField.text = appSettings.defaultTileUrl()
+                                        }
+                                    }
                                 }
                             }
                         }
