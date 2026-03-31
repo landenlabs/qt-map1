@@ -30,10 +30,12 @@ static void qtMessageHandler(QtMsgType type,
     }
 }
 
-static const char *kAppVersion = PROJECT_VERSION;
-static const char *kBuildDate  = __DATE__ " " __TIME__;
-static const char *kAppUrl     = "https://github.com/landenlabs/qt-map1";
-static const char *kSunApiKey  = SUN_API_KEY;
+static const char    *kAppVersion    = PROJECT_VERSION;
+static const char    *kBuildDate     = __DATE__ " " __TIME__;
+static const char    *kAppUrl        = "https://github.com/landenlabs/qt-map1";
+static const char    *kSunApiKey     = SUN_API_KEY;
+static constexpr qint64 kBuildUnixTime  = BUILD_UNIX_TIME;
+static constexpr int    kExpiryDays     = SUN_API_KEY_EXPIRY_DAYS;
 
 int main(int argc, char *argv[])
 {
@@ -56,13 +58,15 @@ int main(int argc, char *argv[])
     qInstallMessageHandler(qtMessageHandler);
     engine.rootContext()->setContextProperty("appLogger", &logger);
 
-    // AppSettings – persists user search paths across sessions via QSettings.
-    AppSettings appSettings;
+    // AppSettings – persists user preferences across sessions via QSettings.
+    // Passes built-in key metadata so expiry can be computed at construction.
+    AppSettings appSettings(QLatin1String(kSunApiKey), kExpiryDays, kBuildUnixTime);
     engine.rootContext()->setContextProperty("appSettings", &appSettings);
 
     // LayerManager and GridManager load from compiled-in resources then apply
     // any saved search paths so external overrides are active from first run.
-    const QString apiKey = QLatin1String(kSunApiKey);
+    // Use effectiveApiKey() so a previously saved user key takes effect immediately.
+    const QString apiKey = appSettings.effectiveApiKey();
     const QStringList initialPaths = appSettings.searchPaths();
 
     LayerManager layerManager(apiKey);
@@ -79,6 +83,15 @@ int main(int argc, char *argv[])
         [&layerManager, &gridManager](const QStringList &paths) {
             layerManager.reload(paths);
             gridManager.reload(paths);
+        });
+
+    // When the user saves or clears their API key, push the new effective key
+    // to both managers.  They use it on the next enableGrid()/enableLayer() call.
+    QObject::connect(&appSettings, &AppSettings::sunApiKeyChanged,
+        [&layerManager, &gridManager, &appSettings](const QString &) {
+            const QString key = appSettings.effectiveApiKey();
+            layerManager.setApiKey(key);
+            gridManager.setApiKey(key);
         });
 
     const QUrl url(QStringLiteral("qrc:/qt/qml/MapApp/main.qml"));

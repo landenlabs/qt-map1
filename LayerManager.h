@@ -45,6 +45,8 @@ public:
     // built-in entry.  Emits layersChanged().
     void reload(const QStringList &searchPaths);
 
+    void setApiKey(const QString &key);
+
     Q_INVOKABLE void enableLayer(int index);
     Q_INVOKABLE void disableLayer(int index);
 

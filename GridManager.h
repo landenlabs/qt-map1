@@ -56,6 +56,8 @@ public:
     // Emits gridsChanged().
     void reload(const QStringList &searchPaths);
 
+    void setApiKey(const QString &key);
+
     Q_INVOKABLE void enableGrid(int index);
     Q_INVOKABLE void disableGrid(int index);
 

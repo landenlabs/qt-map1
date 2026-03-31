@@ -11,7 +11,15 @@ ApplicationWindow {
     visible: true
     width: 1280
     height: 800
-    title: "Qt Map Viewer  v" + appVersion
+    title: {
+        var base = "Qt Map Viewer  v" + appVersion
+        if (appSettings.userKeyActive)
+            return base + "  [licensed]"
+        var d = appSettings.daysRemaining
+        if (d < 0)
+            return base + "  [expired]"
+        return base + "  [" + d + " day" + (d !== 1 ? "s" : "") + " left]"
+    }
 
     // -----------------------------------------------------------------------
     // Shared helpers
@@ -112,9 +120,15 @@ ApplicationWindow {
 
                 plugin: Plugin {
                     name: "osm"
+                    // Tile URL is read from QSettings once at startup.
+                    // Change it in the About › License page; restart to apply.
                     PluginParameter {
-                        name: "osm.mapping.providersrepository.address"
-                        value: Qt.resolvedUrl("../providers/")
+                        name: "osm.mapping.custom.host"
+                        value: appSettings.tileUrl
+                    }
+                    PluginParameter {
+                        name: "osm.mapping.providersrepository.disabled"
+                        value: "true"
                     }
                 }
 
@@ -624,38 +638,85 @@ ApplicationWindow {
                         }
 
                         // ── License / API Keys ────────────────────────────
-                        Item {
-                            Column {
-                                anchors {
-                                    top: parent.top; topMargin: 20
-                                    left: parent.left; leftMargin: 20
-                                    right: parent.right; rightMargin: 20
-                                }
-                                spacing: 12
+                        ScrollView {
+                            clip: true
+                            contentWidth: availableWidth
 
+                            Column {
+                                width: parent.width
+                                topPadding: 20
+                                bottomPadding: 20
+                                leftPadding: 20
+                                rightPadding: 20
+                                spacing: 10
+
+                                // ── Base Map ──────────────────────────────
                                 Text {
                                     width: parent.width
                                     font.pixelSize: 13
                                     font.bold: true
-                                    text: "API Keys"
+                                    text: "Base Map Tile Server"
                                 }
                                 Text {
                                     width: parent.width
                                     wrapMode: Text.WordWrap
                                     font.pixelSize: 12
                                     color: "#444444"
-                                    text: "Enter API keys for data endpoints. Changes take effect " +
-                                          "on the next tile fetch."
+                                    text: "Full tile URL template. Use %z, %x, %y for zoom and " +
+                                          "tile coordinates. Changes take effect after restarting."
                                 }
+                                TextField {
+                                    id: tileUrlField
+                                    width: parent.width
+                                    text: appSettings.tileUrl
+                                    font.pixelSize: 11
+                                    font.family: "monospace"
+                                    placeholderText: "https://tile.openstreetmap.org/%z/%x/%y.png"
+                                }
+                                Row {
+                                    spacing: 6
+                                    Button {
+                                        text: "Save"
+                                        height: 26
+                                        font.pixelSize: 11
+                                        enabled: tileUrlField.text.trim() !== "" &&
+                                                 tileUrlField.text !== appSettings.tileUrl
+                                        onClicked: {
+                                            appSettings.setTileUrl(tileUrlField.text.trim())
+                                            appLogger.append("Tile URL saved — restart to apply")
+                                        }
+                                    }
+                                    Button {
+                                        text: "Reset"
+                                        height: 26
+                                        font.pixelSize: 11
+                                        onClicked: {
+                                            tileUrlField.text = appSettings.defaultTileUrl()
+                                        }
+                                    }
+                                }
+
                                 Rectangle { width: parent.width; height: 1; color: "#cccccc" }
+
+                                // ── Weather Data ──────────────────────────
                                 Text {
-                                    font.pixelSize: 12
+                                    width: parent.width
+                                    font.pixelSize: 13
                                     font.bold: true
-                                    text: "SUN API Key"
+                                    text: "Weather Data API Key"
+                                }
+                                Text {
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: 12
+                                    color: "#444444"
+                                    text: "Your own API key overrides the built-in key and never " +
+                                          "expires. Leave blank to use the built-in key while valid."
                                 }
                                 TextField {
                                     id: sunApiKeyField
                                     width: parent.width
+                                    text: appSettings.sunApiKey
                                     placeholderText: "Enter SUN API key…"
                                     font.pixelSize: 12
                                     font.family: "monospace"
@@ -678,11 +739,37 @@ ApplicationWindow {
                                         text: "Save"
                                         height: 26
                                         font.pixelSize: 11
+                                        enabled: sunApiKeyField.text.trim() !== "" &&
+                                                 sunApiKeyField.text !== appSettings.sunApiKey
                                         onClicked: {
-                                            // TODO: persist via QSettings
-                                            appLogger.append("API key updated (restart required)")
+                                            appSettings.setSunApiKey(sunApiKeyField.text.trim())
+                                            appLogger.append("Weather API key saved — re-enable layers to apply")
                                         }
                                     }
+                                    Button {
+                                        text: "Clear"
+                                        height: 26
+                                        font.pixelSize: 11
+                                        enabled: appSettings.userKeyActive
+                                        onClicked: {
+                                            appSettings.setSunApiKey("")
+                                            sunApiKeyField.text = ""
+                                            appLogger.append("Weather API key cleared — using built-in key")
+                                        }
+                                    }
+                                }
+                                Text {
+                                    width: parent.width
+                                    font.pixelSize: 11
+                                    color: appSettings.userKeyActive  ? "#2e7d32" :
+                                           appSettings.daysRemaining < 0 ? "#c62828" : "#616161"
+                                    text: appSettings.userKeyActive
+                                          ? "User key active — unlimited access"
+                                          : (appSettings.daysRemaining < 0
+                                             ? "Built-in key expired — enter your own key above"
+                                             : "Built-in key — " + appSettings.daysRemaining +
+                                               " day" + (appSettings.daysRemaining !== 1 ? "s" : "") +
+                                               " remaining")
                                 }
                             }
                         }
@@ -692,6 +779,7 @@ ApplicationWindow {
 
             // ---------------------------------------------------------------
             // Help button – upper left
+            // Green tint when user has a valid API key; red tint when expired.
             // ---------------------------------------------------------------
             RoundButton {
                 text: "?"
@@ -700,6 +788,13 @@ ApplicationWindow {
                     top: parent.top
                     left: parent.left
                     margins: 10
+                }
+                background: Rectangle {
+                    radius: width / 2
+                    color: appSettings.userKeyActive  ? "#a5d6a7" :
+                           appSettings.daysRemaining < 0 ? "#ef9a9a" : "#e0e0e0"
+                    border.color: Qt.darker(color, 1.3)
+                    border.width: 1
                 }
                 onClicked: aboutDialog.open()
             }

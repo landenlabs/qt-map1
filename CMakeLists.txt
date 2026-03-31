@@ -37,6 +37,15 @@ else()
     set(SUN_API_KEY "")
 endif()
 
+# Fallback if not set in secrets.cmake
+if(NOT DEFINED SUN_API_KEY_EXPIRY_DAYS)
+    set(SUN_API_KEY_EXPIRY_DAYS 30)
+endif()
+
+# Unix timestamp (seconds since epoch) captured at CMake configure time.
+# This anchors the built-in key expiry to the day the project was configured.
+string(TIMESTAMP BUILD_UNIX_TIME "%s" UTC)
+
 qt_add_executable(qt-map1
     main.cpp
     Logger.h
@@ -88,6 +97,8 @@ qt_add_shaders(qt-map1 "floatgrid_shaders"
 target_compile_definitions(qt-map1 PRIVATE
     PROJECT_VERSION="${PROJECT_VERSION}"
     SUN_API_KEY="${SUN_API_KEY}"
+    BUILD_UNIX_TIME=${BUILD_UNIX_TIME}
+    SUN_API_KEY_EXPIRY_DAYS=${SUN_API_KEY_EXPIRY_DAYS}
 )
 
 target_link_libraries(qt-map1 PRIVATE

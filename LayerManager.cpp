@@ -19,6 +19,10 @@ LayerManager::LayerManager(const QString &apiKey, QObject *parent)
     rebuildVariant();
 }
 
+// ─── setApiKey ────────────────────────────────────────────────────────────────
+
+void LayerManager::setApiKey(const QString &key) { m_apiKey = key; }
+
 // ─── reload ───────────────────────────────────────────────────────────────────
 
 void LayerManager::reload(const QStringList &searchPaths)

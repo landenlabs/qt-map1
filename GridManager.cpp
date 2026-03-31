@@ -36,6 +36,10 @@ GridManager::GridManager(const QString &apiKey, QObject *parent)
     rebuildVariant();
 }
 
+// ─── setApiKey ────────────────────────────────────────────────────────────────
+
+void GridManager::setApiKey(const QString &key) { m_apiKey = key; }
+
 // ─── reload ───────────────────────────────────────────────────────────────────
 
 void GridManager::reload(const QStringList &searchPaths)

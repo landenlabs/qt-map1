@@ -1,17 +1,33 @@
 #include "AppSettings.h"
+#include <QDateTime>
 
-AppSettings::AppSettings(QObject *parent)
+AppSettings::AppSettings(const QString &builtinApiKey,
+                         int            expiryDays,
+                         qint64         buildUnixTime,
+                         QObject       *parent)
     : QObject(parent)
     , m_settings(QStringLiteral("qt-map1"), QStringLiteral("qt-map1"))
+    , m_builtinApiKey(builtinApiKey)
 {
     m_searchPaths = m_settings.value(QStringLiteral("searchPaths"))
                                .toStringList();
+
+    m_tileUrl = m_settings.value(QStringLiteral("tileUrl"),
+                                  QStringLiteral(kDefaultTileUrl))
+                           .toString();
+
+    m_sunApiKey = m_settings.value(QStringLiteral("sunApiKey"))
+                             .toString();
+
+    // Compute how many days remain before the built-in key expires.
+    const qint64 now        = QDateTime::currentSecsSinceEpoch();
+    const qint64 expiryTime = buildUnixTime + static_cast<qint64>(expiryDays) * 86400LL;
+    m_daysRemaining = static_cast<int>((expiryTime - now) / 86400LL);
 }
 
-QStringList AppSettings::searchPaths() const
-{
-    return m_searchPaths;
-}
+// ─── searchPaths ──────────────────────────────────────────────────────────────
+
+QStringList AppSettings::searchPaths() const { return m_searchPaths; }
 
 void AppSettings::setSearchPaths(const QStringList &paths)
 {
@@ -19,4 +35,50 @@ void AppSettings::setSearchPaths(const QStringList &paths)
     m_searchPaths = paths;
     m_settings.setValue(QStringLiteral("searchPaths"), paths);
     emit searchPathsChanged(paths);
+}
+
+// ─── tileUrl ──────────────────────────────────────────────────────────────────
+
+QString AppSettings::tileUrl() const { return m_tileUrl; }
+
+void AppSettings::setTileUrl(const QString &url)
+{
+    if (m_tileUrl == url) return;
+    m_tileUrl = url;
+    m_settings.setValue(QStringLiteral("tileUrl"), url);
+    emit tileUrlChanged(url);
+}
+
+// ─── sunApiKey ────────────────────────────────────────────────────────────────
+
+QString AppSettings::sunApiKey() const { return m_sunApiKey; }
+
+void AppSettings::setSunApiKey(const QString &key)
+{
+    if (m_sunApiKey == key) return;
+    m_sunApiKey = key;
+    m_settings.setValue(QStringLiteral("sunApiKey"), key);
+    emit sunApiKeyChanged(key);
+}
+
+// ─── Derived accessors ────────────────────────────────────────────────────────
+
+bool AppSettings::userKeyActive() const { return !m_sunApiKey.isEmpty(); }
+
+int AppSettings::daysRemaining() const { return m_daysRemaining; }
+
+QString AppSettings::effectiveApiKey() const
+{
+    if (!m_sunApiKey.isEmpty())
+        return m_sunApiKey;
+    if (m_daysRemaining >= 0)
+        return m_builtinApiKey;
+    return QString();   // expired and no user key → deny access
+}
+
+// ─── defaultTileUrl ───────────────────────────────────────────────────────────
+
+QString AppSettings::defaultTileUrl() const
+{
+    return QStringLiteral(kDefaultTileUrl);
 }
