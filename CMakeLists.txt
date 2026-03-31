@@ -41,6 +41,8 @@ qt_add_executable(qt-map1
     main.cpp
     Logger.h
     Logger.cpp
+    AppSettings.h
+    AppSettings.cpp
     OverlayItem.h
     OverlayItem.cpp
     FloatGridMaterial.h
@@ -66,9 +68,11 @@ qt_add_qml_module(qt-map1
 
 # Compile GLSL shaders → .qsb (OpenGL/Vulkan/Metal cross-compiled by qsb)
 # Output resources: :/shaders/floatgrid.vert.qsb  :/shaders/floatgrid.frag.qsb
-qt_add_resources(qt-map1 "palette_data"
+qt_add_resources(qt-map1 "app_data"
     PREFIX "/data"
     FILES
+        layers.json
+        grids.json
         palettes.json
 )
 
@@ -84,8 +88,6 @@ qt_add_shaders(qt-map1 "floatgrid_shaders"
 target_compile_definitions(qt-map1 PRIVATE
     PROJECT_VERSION="${PROJECT_VERSION}"
     SUN_API_KEY="${SUN_API_KEY}"
-    LAYERS_FILE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/layers.json"
-    GRIDS_FILE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/grids.json"
 )
 
 target_link_libraries(qt-map1 PRIVATE

@@ -96,6 +96,7 @@ void OverlayItem::setGridProduct(const QString &product, const QString &type,
     m_maxLod      = maxLod;
     m_urlInfo     = urlInfo;
     m_urlData     = urlData;
+    m_paletteName = paletteName;
 
     const PaletteManager::PaletteInfo *pal = m_paletteManager.palette(paletteName);
     if (pal) {
@@ -316,6 +317,27 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
     }
 
     return root;
+}
+
+// ─── reloadPalettes ───────────────────────────────────────────────────────────
+
+void OverlayItem::reloadPalettes(const QStringList &searchPaths)
+{
+    m_paletteManager.reload(searchPaths);
+
+    // Re-apply the current palette so the overlay updates without requiring
+    // the user to re-toggle the grid button.
+    if (!m_paletteName.isEmpty()) {
+        const PaletteManager::PaletteInfo *pal = m_paletteManager.palette(m_paletteName);
+        if (pal) {
+            m_paletteScale    = pal->scale;
+            m_paletteOffset   = pal->offset;
+            m_paletteNumSteps = pal->numSteps;
+            m_paletteImage    = pal->image;
+            m_paletteDirty    = true;
+            update();
+        }
+    }
 }
 
 void OverlayItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)

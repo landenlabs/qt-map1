@@ -1,60 +1,13 @@
 #include "GridManager.h"
 
-#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 
-// ─── Construction ─────────────────────────────────────────────────────────────
-/*
-  Sample "grids.json"
-    {
-        "name": "GTemp",
-        "prodCode": "1248",
-        "prodName": "Temperaturesurface",
-        "type": "float4",
-        "urldata": "https://api.weather.com/v2/tiler/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
-        "utltm": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}"
-    },
-*/
-GridManager::GridManager(const QString &gridsFilePath,
-                          const QString &apiKey,
-                          QObject *parent)
-    : QObject(parent), m_apiKey(apiKey)
-{
-    // Search order: exe dir first (deployed / build run), then source-tree hint.
-    const QString exeDir = QDir(QCoreApplication::applicationDirPath())
-                               .filePath("grids.json");
-    const QString path   = QFile::exists(exeDir) ? exeDir : gridsFilePath;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-    m_grids = parseFile(path);
-
-    for (const GridDef &gd : std::as_const(m_grids)) {
-        m_gridsVariant.append(QVariantMap{
-            { "name",      gd.name      },
-            { "prodCode",  gd.prodCode  },
-            { "prodName",  gd.prodName  },
-            { "product",   gd.product   },
-            { "type",      gd.type      },
-            { "comment",   gd.comment   },
-            { "maxLod",    gd.maxLod    },
-            { "hasTiming", gd.hasTiming },
-            { "urlInfo",     gd.urlInfo     },
-            { "urlData",     gd.urlData     },
-            { "paletteName", gd.paletteName },
-        });
-    }
-}
-
-// ─── QML property ─────────────────────────────────────────────────────────────
-
-QVariantList GridManager::grids() const { return m_gridsVariant; }
-
-// ─── File parsing ─────────────────────────────────────────────────────────────
-
-// Helper: return item value if present and non-empty, else the default value.
 static QString jsonString(const QJsonObject &obj, const QString &key,
                           const QString &def = QString())
 {
@@ -72,25 +25,95 @@ static int jsonInt(const QJsonObject &obj, const QString &key, int def)
     return v.isDouble() ? v.toInt(def) : def;
 }
 
-QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
+// ─── Construction ─────────────────────────────────────────────────────────────
+
+GridManager::GridManager(const QString &apiKey, QObject *parent)
+    : QObject(parent), m_apiKey(apiKey)
+{
+    QFile f(QStringLiteral(":/data/grids.json"));
+    if (f.open(QIODevice::ReadOnly))
+        m_grids = parseJson(f.readAll(), QStringLiteral(":/data/grids.json"));
+    rebuildVariant();
+}
+
+// ─── reload ───────────────────────────────────────────────────────────────────
+
+void GridManager::reload(const QStringList &searchPaths)
+{
+    m_grids.clear();
+
+    QFile f(QStringLiteral(":/data/grids.json"));
+    if (f.open(QIODevice::ReadOnly))
+        m_grids = parseJson(f.readAll(), QStringLiteral(":/data/grids.json"));
+
+    for (const QString &dir : searchPaths) {
+        const QString path = QDir(dir).filePath(QStringLiteral("grids.json"));
+        QFile ef(path);
+        if (!ef.open(QIODevice::ReadOnly)) continue;
+        const QVector<GridDef> extra = parseJson(ef.readAll(), path);
+        for (const GridDef &def : extra)
+            mergeGrid(def);
+    }
+
+    rebuildVariant();
+    emit gridsChanged();
+}
+
+// ─── mergeGrid ────────────────────────────────────────────────────────────────
+
+void GridManager::mergeGrid(const GridDef &def)
+{
+    for (GridDef &existing : m_grids) {
+        if (existing.name == def.name) {
+            existing = def;
+            return;
+        }
+    }
+    m_grids.append(def);
+}
+
+// ─── rebuildVariant ───────────────────────────────────────────────────────────
+
+void GridManager::rebuildVariant()
+{
+    m_gridsVariant.clear();
+    for (const GridDef &gd : std::as_const(m_grids)) {
+        m_gridsVariant.append(QVariantMap{
+            { "name",        gd.name        },
+            { "prodCode",    gd.prodCode    },
+            { "prodName",    gd.prodName    },
+            { "product",     gd.product     },
+            { "type",        gd.type        },
+            { "comment",     gd.comment     },
+            { "maxLod",      gd.maxLod      },
+            { "hasTiming",   gd.hasTiming   },
+            { "urlInfo",     gd.urlInfo     },
+            { "urlData",     gd.urlData     },
+            { "paletteName", gd.paletteName },
+        });
+    }
+}
+
+// ─── QML property ─────────────────────────────────────────────────────────────
+
+QVariantList GridManager::grids() const { return m_gridsVariant; }
+
+// ─── JSON parsing ─────────────────────────────────────────────────────────────
+
+QVector<GridManager::GridDef> GridManager::parseJson(const QByteArray &data,
+                                                      const QString &src)
 {
     QVector<GridDef> result;
 
-    QFile f(path);
-    if (!f.open(QIODevice::ReadOnly)) {
-        qWarning("GridManager: cannot open '%s'", qPrintable(path));
-        return result;
-    }
-
     QJsonParseError err;
-    const QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &err);
+    const QJsonDocument doc = QJsonDocument::fromJson(data, &err);
     if (err.error != QJsonParseError::NoError) {
         qWarning("GridManager: JSON parse error in '%s': %s",
-                 qPrintable(path), qPrintable(err.errorString()));
+                 qPrintable(src), qPrintable(err.errorString()));
         return result;
     }
     if (!doc.isObject()) {
-        qWarning("GridManager: '%s' root must be a JSON object", qPrintable(path));
+        qWarning("GridManager: '%s' root must be a JSON object", qPrintable(src));
         return result;
     }
 
@@ -107,7 +130,7 @@ QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
     // ── Grid items ────────────────────────────────────────────────────────────
     const QJsonArray items = root.value(QStringLiteral("grids")).toArray();
     if (items.isEmpty()) {
-        qWarning("GridManager: no 'grids' array found in '%s'", qPrintable(path));
+        qWarning("GridManager: no 'grids' array found in '%s'", qPrintable(src));
         return result;
     }
 
@@ -116,7 +139,6 @@ QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
         const QJsonObject obj = v.toObject();
 
         GridDef gd;
-        // Required per-item fields
         gd.name     = jsonString(obj, "name");
         gd.prodCode = jsonString(obj, "prodCode");
         gd.prodName = jsonString(obj, "prodName");
@@ -125,7 +147,6 @@ QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
             continue;
         }
 
-        // Optional per-item overrides; fall back to top-level defaults
         gd.type        = jsonString(obj, "type",        defaults.type);
         gd.urlData     = jsonString(obj, "urldata",     defaults.urlData);
         gd.urlTm       = jsonString(obj, "utltm",       defaults.urlTm);
@@ -138,7 +159,7 @@ QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
         gd.product   = gd.prodCode + QLatin1Char(':') + gd.prodName;
 
         if (gd.urlData.isEmpty()) {
-            qWarning("GridManager: skipping '%s' — no urldata (no default either)",
+            qWarning("GridManager: skipping '%s' — no urldata",
                      qPrintable(gd.name));
             continue;
         }
@@ -147,7 +168,7 @@ QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
     }
 
     qInfo("GridManager: loaded %d grid(s) from '%s'",
-          (int)result.size(), qPrintable(path));
+          (int)result.size(), qPrintable(src));
     return result;
 }
 
@@ -167,17 +188,13 @@ void GridManager::enableGrid(int index)
     if (index < 0 || index >= (int)m_grids.size()) return;
     const GridDef &gd = m_grids[index];
 
-    // Substitute {k} and {p}; leave {rt}, {t}, {z}, {x}, {y} for tile fetcher.
     const QString endpoint = substituteKP(gd.urlData, gd.product);
 
-    qInfo("GridManager: grid %d '%s' enabled",
-          index, qPrintable(gd.name));
-
+    qInfo("GridManager: grid %d '%s' enabled", index, qPrintable(gd.name));
     emit gridReady(index, endpoint);
 }
 
 void GridManager::disableGrid(int index)
 {
     Q_UNUSED(index)
-    // Overlay teardown handled in QML via gridManager.disableGrid signal chain.
 }

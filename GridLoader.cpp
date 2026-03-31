@@ -251,7 +251,7 @@ void GridLoader::handleInfoReply(QNetworkReply *reply,
     const QJsonObject attrs = meta.value(QStringLiteral("attributes")).toObject();
     qInfo("GridLoader: info product=%s  rt=%s  t-count=%d  selected-t=%lld",
           qPrintable(pending.product), qPrintable(rt),
-          tValues.size(), static_cast<long long>(selectedT));
+          (int)tValues.size(), static_cast<long long>(selectedT));
     qInfo("  description=%s  dataType=%s  units=%s  missing=%s",
           qPrintable(meta.value(QStringLiteral("description")).toString()),
           qPrintable(meta.value(QStringLiteral("dataType")).toString()),

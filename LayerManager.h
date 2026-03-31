@@ -5,25 +5,23 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
-// LayerManager – loads overlay layer definitions from layers.json and handles
-// the two-stage tile-loading protocol used by weather data providers:
+// LayerManager – loads overlay layer definitions from :/data/layers.json and
+// handles the two-stage tile-loading protocol used by weather data providers.
 //
-//   Stage 1 (enableLayer):  GET urltm → parse seriesInfo → extract fts[0]
-//   Stage 2 (layerReady):   tileUrlTemplate emitted with {k} and {t} resolved;
-//                           {x}, {y}, {z} remain for the tile fetcher.
-//
-// Layers that only carry a legacy "url" field skip stage 1 and emit immediately.
+// Data loading:
+//   1. Built-in defaults are compiled into the app as :/data/layers.json.
+//   2. reload(searchPaths) re-reads the defaults then merges any layers.json
+//      found in each search directory.  External entries with the same "name"
+//      replace the built-in entry; new names are appended.
+//   3. Emits layersChanged() so QML Repeaters rebuild automatically.
 //
 // QML usage:
-//   layerManager.layers        – model for the Repeater (name, hasTwoStage)
+//   layerManager.layers          – model for the Repeater (name, hasTwoStage)
 //   layerManager.enableLayer(i)  – call when toggle turns ON
 //   layerManager.disableLayer(i) – call when toggle turns OFF
-//   Connections { target: layerManager
-//     function onLayerReady(i, url) { ... }
-//     function onLayerError(i, msg) { ... }
-//   }
 
 class LayerManager : public QObject
 {
@@ -33,43 +31,37 @@ class LayerManager : public QObject
 public:
     struct LayerDef {
         QString name;
-        QString urlPng;       // tile template: {k} {t} {x} {y} {z}
-        QString urlTm;        // time-series endpoint template: {k}
-        bool    hasTwoStage;  // true when both urlPng + urlTm are present
+        QString urlPng;
+        QString urlTm;
+        bool    hasTwoStage;
     };
 
-    // layersFilePath – primary path to layers.json (usually source-tree path
-    //                  baked in at compile time; falls back to exe dir).
-    // apiKey – value substituted for {k} in all URL templates.
-    explicit LayerManager(const QString &layersFilePath,
-                          const QString &apiKey,
-                          QObject *parent = nullptr);
+    explicit LayerManager(const QString &apiKey, QObject *parent = nullptr);
 
     QVariantList layers() const;
 
-    // Toggle a layer on.  Triggers stage-1 fetch for two-stage layers.
-    Q_INVOKABLE void enableLayer(int index);
+    // Full reload: reset to resource defaults then merge any layers.json in
+    // each search directory.  Duplicate names in external files replace the
+    // built-in entry.  Emits layersChanged().
+    void reload(const QStringList &searchPaths);
 
-    // Toggle a layer off.  Tile teardown wired in a future phase.
+    Q_INVOKABLE void enableLayer(int index);
     Q_INVOKABLE void disableLayer(int index);
 
 signals:
     void layersChanged();
-
-    // Emitted when the tile URL template is ready.
-    // tileUrlTemplate has {k} and {t} already substituted; {x}, {y}, {z} remain.
     void layerReady(int index, const QString &tileUrlTemplate);
-
-    // Emitted on any error during stage-1 fetch or parse.
     void layerError(int index, const QString &errorMessage);
 
 private:
-    static QVector<LayerDef> parseFile(const QString &path);
-    QString                  substituteKey(const QString &tmpl) const;
-    void                     handleTimestampReply(QNetworkReply *reply, int index);
+    static QVector<LayerDef> parseJson(const QByteArray &data, const QString &src);
+    void mergeLayer(const LayerDef &def);
+    void rebuildVariant();
+    QString substituteKey(const QString &tmpl) const;
+    void handleTimestampReply(QNetworkReply *reply, int index);
 
     QVector<LayerDef>     m_layers;
-    QVariantList          m_layersVariant; // cached read-only copy for QML
+    QVariantList          m_layersVariant;
     QString               m_apiKey;
     QNetworkAccessManager m_network;
 };

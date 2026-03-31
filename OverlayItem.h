@@ -7,6 +7,7 @@
 #include <QNetworkAccessManager>
 #include <QQuickItem>
 #include <QRectF>
+#include <QStringList>
 #include <QVector>
 #include <QVariantList>
 
@@ -55,6 +56,10 @@ public:
 
     Q_INVOKABLE void setVisibleTiles(const QVariantList &tiles);
 
+    // Reload palettes from the built-in resource plus each search directory,
+    // then re-apply the current palette if one is active.
+    Q_INVOKABLE void reloadPalettes(const QStringList &searchPaths);
+
 signals:
     void mapItemChanged();
     void endpointChanged();
@@ -95,6 +100,7 @@ private:
     int     m_maxLod        = 2;
 
     // Palette encoding coefficients (from PaletteManager::PaletteInfo).
+    QString m_paletteName;
     float   m_paletteScale  = 1.0f;
     float   m_paletteOffset = 0.0f;
     int     m_paletteNumSteps = 2;

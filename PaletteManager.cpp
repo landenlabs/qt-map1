@@ -1,5 +1,6 @@
 #include "PaletteManager.h"
 
+#include <QDir>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -9,19 +10,41 @@
 
 // ─── Construction ─────────────────────────────────────────────────────────────
 
-PaletteManager::PaletteManager(const QString &resourcePath)
+PaletteManager::PaletteManager()
 {
-    QFile f(resourcePath);
-    if (!f.open(QIODevice::ReadOnly)) {
-        qWarning("PaletteManager: cannot open '%s'", qPrintable(resourcePath));
-        return;
-    }
+    QFile f(QStringLiteral(":/data/palettes.json"));
+    if (f.open(QIODevice::ReadOnly))
+        loadFromBytes(f.readAll(), QStringLiteral(":/data/palettes.json"));
+}
 
+// ─── reload ───────────────────────────────────────────────────────────────────
+
+void PaletteManager::reload(const QStringList &searchPaths)
+{
+    m_palettes.clear();
+
+    QFile f(QStringLiteral(":/data/palettes.json"));
+    if (f.open(QIODevice::ReadOnly))
+        loadFromBytes(f.readAll(), QStringLiteral(":/data/palettes.json"));
+
+    for (const QString &dir : searchPaths) {
+        const QString path = QDir(dir).filePath(QStringLiteral("palettes.json"));
+        QFile ef(path);
+        if (!ef.open(QIODevice::ReadOnly)) continue;
+        qInfo("PaletteManager: merging '%s'", qPrintable(path));
+        loadFromBytes(ef.readAll(), path);
+    }
+}
+
+// ─── loadFromBytes ────────────────────────────────────────────────────────────
+
+void PaletteManager::loadFromBytes(const QByteArray &data, const QString &src)
+{
     QJsonParseError err;
-    const QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &err);
+    const QJsonDocument doc = QJsonDocument::fromJson(data, &err);
     if (err.error != QJsonParseError::NoError) {
         qWarning("PaletteManager: JSON parse error in '%s': %s",
-                 qPrintable(resourcePath), qPrintable(err.errorString()));
+                 qPrintable(src), qPrintable(err.errorString()));
         return;
     }
 
@@ -30,8 +53,8 @@ PaletteManager::PaletteManager(const QString &resourcePath)
                                     .toObject();
 
     for (auto it = palettes.constBegin(); it != palettes.constEnd(); ++it) {
-        const QJsonObject pal = it.value().toObject();
-        const QJsonObject vti = pal.value(QStringLiteral("valueToIndex")).toObject();
+        const QJsonObject pal  = it.value().toObject();
+        const QJsonObject vti  = pal.value(QStringLiteral("valueToIndex")).toObject();
         const QJsonArray  steps = pal.value(QStringLiteral("steps")).toArray();
 
         if (steps.isEmpty()) {
@@ -68,9 +91,6 @@ QStringList PaletteManager::names() const
 
 // ─── buildImage ───────────────────────────────────────────────────────────────
 // Linearly interpolates the control-point steps into a 256×1 RGBA8888 strip.
-// The strip is indexed by normalised palette UV [0, 1]:
-//   UV = (gridValue - offset) * scale / (numSteps - 1)
-// Sample i maps to UV = i / (resolution - 1).
 
 QImage PaletteManager::buildImage(const QJsonArray &steps, int resolution)
 {
@@ -94,16 +114,13 @@ QImage PaletteManager::buildImage(const QJsonArray &steps, int resolution)
     uchar *line = img.scanLine(0);
 
     for (int i = 0; i < resolution; ++i) {
-        const float t   = float(i) / float(resolution - 1);   // [0, 1]
-        const float idx = t * float(n - 1);                    // [0, n-1]
+        const float t   = float(i) / float(resolution - 1);
+        const float idx = t * float(n - 1);
         const int   lo  = int(idx);
         const int   hi  = std::min(lo + 1, n - 1);
         const float f   = idx - float(lo);
 
-        const auto lerp = [f](float a, float b) {
-            return a + (b - a) * f;
-        };
-
+        const auto lerp = [f](float a, float b) { return a + (b - a) * f; };
         auto clamp01 = [](float v) -> uchar {
             return static_cast<uchar>(std::clamp(v, 0.0f, 1.0f) * 255.0f + 0.5f);
         };

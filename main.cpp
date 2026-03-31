@@ -6,10 +6,13 @@
 #include <cstdio>
 
 #include "Logger.h"
+#include "AppSettings.h"
+#include "OverlayItem.h"
+#include "LayerManager.h"
+#include "GridManager.h"
 
 // ── Qt message handler ────────────────────────────────────────────────────────
 // Routes qInfo() and qWarning() to both stdout and the in-app log panel.
-// Debug messages go to stdout only (too noisy for the panel).
 
 static Logger *gLogger = nullptr;
 
@@ -21,30 +24,23 @@ static void qtMessageHandler(QtMsgType type,
     fflush(stdout);
 
     if (gLogger && (type == QtInfoMsg || type == QtWarningMsg)) {
-        // QueuedConnection: safe to call from any thread; posts to the event loop.
         QMetaObject::invokeMethod(gLogger, "appendSilent",
                                   Qt::QueuedConnection,
                                   Q_ARG(QString, msg));
     }
 }
-#include "OverlayItem.h"
-#include "LayerManager.h"
-#include "GridManager.h"
-
 
 static const char *kAppVersion = PROJECT_VERSION;
 static const char *kBuildDate  = __DATE__ " " __TIME__;
 static const char *kAppUrl     = "https://github.com/landenlabs/qt-map1";
-static const char *kSunApiKey  = SUN_API_KEY;  // Weather Company layer tile key
+static const char *kSunApiKey  = SUN_API_KEY;
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
     app.setApplicationVersion(QLatin1String(kAppVersion));
+    app.setOrganizationName(QStringLiteral("qt-map1"));
 
-    // Use the Basic style so that custom `background` on Button delegates works.
-    // The native macOS style does not support background customization and
-    // emits a warning for every customized button.
     QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     qmlRegisterType<OverlayItem>("MapApp", 1, 0, "OverlayItem");
@@ -60,16 +56,30 @@ int main(int argc, char *argv[])
     qInstallMessageHandler(qtMessageHandler);
     engine.rootContext()->setContextProperty("appLogger", &logger);
 
-    // LayerManager reads layers.json, owns the two-stage network fetch,
-    // and is exposed to QML as layerManager.
-    LayerManager layerManager(QLatin1String(LAYERS_FILE_PATH),
-                              QLatin1String(kSunApiKey));
+    // AppSettings – persists user search paths across sessions via QSettings.
+    AppSettings appSettings;
+    engine.rootContext()->setContextProperty("appSettings", &appSettings);
+
+    // LayerManager and GridManager load from compiled-in resources then apply
+    // any saved search paths so external overrides are active from first run.
+    const QString apiKey = QLatin1String(kSunApiKey);
+    const QStringList initialPaths = appSettings.searchPaths();
+
+    LayerManager layerManager(apiKey);
+    layerManager.reload(initialPaths);
     engine.rootContext()->setContextProperty("layerManager", &layerManager);
 
-    // GridManager reads grids.json and is exposed to QML as gridManager.
-    GridManager gridManager(QLatin1String(GRIDS_FILE_PATH),
-                            QLatin1String(kSunApiKey));
+    GridManager gridManager(apiKey);
+    gridManager.reload(initialPaths);
     engine.rootContext()->setContextProperty("gridManager", &gridManager);
+
+    // When the user adds/removes search paths in the About dialog, reload both
+    // managers so new or replaced entries appear immediately.
+    QObject::connect(&appSettings, &AppSettings::searchPathsChanged,
+        [&layerManager, &gridManager](const QStringList &paths) {
+            layerManager.reload(paths);
+            gridManager.reload(paths);
+        });
 
     const QUrl url(QStringLiteral("qrc:/qt/qml/MapApp/main.qml"));
     QObject::connect(

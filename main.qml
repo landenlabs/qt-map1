@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs as Dialogs
 import QtLocation
 import QtPositioning
 import MapApp
@@ -254,6 +255,8 @@ ApplicationWindow {
                     endpoint: ""
                     opacity: 0.75
                     visible: false
+                    // Apply any search paths saved from a previous session.
+                    Component.onCompleted: overlay.reloadPalettes(appSettings.searchPaths)
                 }
 
                 // -------------------------------------------------------
@@ -343,79 +346,346 @@ ApplicationWindow {
             }
 
             // ---------------------------------------------------------------
-            // About dialog
+            // About / Settings dialog
             // ---------------------------------------------------------------
             Dialog {
                 id: aboutDialog
-                title: "About Qt Map Viewer"
+                title: "Qt Map Viewer"
                 modal: true
                 anchors.centerIn: parent
+                width: 680
+                height: 480
+                padding: 0
                 standardButtons: Dialog.Close
 
-                Column {
-                    spacing: 10
-                    width: 420
+                property string currentPage: "about"
+                onOpened: currentPage = "about"
 
-                    Text {
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        font.pixelSize: 15
-                        font.bold: true
-                        text: "Qt Map Viewer"
+                // Folder picker used by the Files/Paths/Cache page
+                Dialogs.FolderDialog {
+                    id: folderPickerDialog
+                    title: "Add Search Path"
+                    onAccepted: {
+                        var path = selectedFolder.toString().replace(/^file:\/\//, "")
+                        var paths = appSettings.searchPaths.slice()
+                        paths.push(path)
+                        appSettings.setSearchPaths(paths)
                     }
-                    Text {
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        font.pixelSize: 13
-                        text: "Interactive map viewer built with Qt 6 and Qt Location.\n" +
-                              "Displays OpenStreetMap tiles with pan and pinch-to-zoom.\n" +
-                              "Supports a floating-point grid overlay rendered via an " +
-                              "OpenGL/RHI fragment shader with a viridis colormap."
-                    }
-                    Rectangle { width: parent.width; height: 1; color: "#cccccc" }
-                    Grid {
-                        columns: 2
-                        columnSpacing: 12
-                        rowSpacing: 6
-                        Text { font.pixelSize: 13; font.bold: true; text: "Version:" }
-                        Text { font.pixelSize: 13; text: appVersion }
-                        Text { font.pixelSize: 13; font.bold: true; text: "Built:" }
-                        Text { font.pixelSize: 13; text: buildDate }
-                        Text { font.pixelSize: 13; font.bold: true; text: "Source:" }
-                        Text {
-                            font.pixelSize: 13
-                            color: "#1a73e8"
-                            text: appUrl
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: Qt.openUrlExternally(appUrl)
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 0
+
+                    // ── Left navigation ───────────────────────────────────
+                    Rectangle {
+                        Layout.preferredWidth: 160
+                        Layout.fillHeight: true
+                        color: "#f5f5f5"
+
+                        // Right border line
+                        Rectangle {
+                            anchors { top: parent.top; bottom: parent.bottom; right: parent.right }
+                            width: 1
+                            color: "#e0e0e0"
+                        }
+
+                        Column {
+                            width: parent.width
+                            anchors { top: parent.top; topMargin: 8 }
+
+                            Repeater {
+                                model: ListModel {
+                                    ListElement { navLabel: "About";             navKey: "about"   }
+                                    ListElement { navLabel: "Files/Paths/Cache"; navKey: "files"   }
+                                    ListElement { navLabel: "License";           navKey: "license" }
+                                }
+
+                                delegate: Rectangle {
+                                    required property string navLabel
+                                    required property string navKey
+                                    width: 160
+                                    height: 38
+                                    color: aboutDialog.currentPage === navKey ? "#dce8fb" : "transparent"
+
+                                    Rectangle {
+                                        visible: aboutDialog.currentPage === navKey
+                                        width: 3; height: parent.height
+                                        anchors.left: parent.left
+                                        color: "#1a73e8"
+                                    }
+
+                                    Text {
+                                        anchors {
+                                            left: parent.left; leftMargin: 14
+                                            verticalCenter: parent.verticalCenter
+                                        }
+                                        text: navLabel
+                                        font.pixelSize: 13
+                                        color: aboutDialog.currentPage === navKey ? "#1a73e8" : "#333333"
+                                        font.bold: aboutDialog.currentPage === navKey
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: aboutDialog.currentPage = navKey
+                                    }
+                                }
                             }
                         }
                     }
-                    Rectangle { width: parent.width; height: 1; color: "#cccccc" }
-                    Text {
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        font.pixelSize: 12
-                        font.bold: true
-                        text: "Tile Cache"
-                    }
-                    Text {
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        font.pixelSize: 12
-                        color: "#444444"
-                        text: "If old watermarked tiles appear after changing the tile provider, " +
-                              "clear the disk cache:"
-                    }
-                    Text {
-                        width: parent.width
-                        wrapMode: Text.WrapAnywhere
-                        font.pixelSize: 12
-                        font.family: "monospace"
-                        color: "#222222"
-                        text: "~/Library/Caches/QtLocation/5.8/tiles/osm/"
+
+                    // ── Right content ─────────────────────────────────────
+                    StackLayout {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        currentIndex: aboutDialog.currentPage === "about"   ? 0 :
+                                      aboutDialog.currentPage === "files"   ? 1 : 2
+
+                        // ── About ─────────────────────────────────────────
+                        Item {
+                            Column {
+                                anchors {
+                                    top: parent.top; topMargin: 20
+                                    left: parent.left; leftMargin: 20
+                                    right: parent.right; rightMargin: 20
+                                }
+                                spacing: 10
+
+                                Text {
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: 15
+                                    font.bold: true
+                                    text: "Qt Map Viewer"
+                                }
+                                Text {
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: 13
+                                    text: "Interactive map viewer built with Qt 6 and Qt Location.\n" +
+                                          "Displays OpenStreetMap tiles with pan and pinch-to-zoom.\n" +
+                                          "Supports a floating-point grid overlay rendered via an " +
+                                          "OpenGL/RHI fragment shader with a palette colormap."
+                                }
+                                Rectangle { width: parent.width; height: 1; color: "#cccccc" }
+                                Grid {
+                                    columns: 2
+                                    columnSpacing: 12
+                                    rowSpacing: 6
+                                    Text { font.pixelSize: 13; font.bold: true; text: "Version:" }
+                                    Text { font.pixelSize: 13; text: appVersion }
+                                    Text { font.pixelSize: 13; font.bold: true; text: "Built:" }
+                                    Text { font.pixelSize: 13; text: buildDate }
+                                    Text { font.pixelSize: 13; font.bold: true; text: "Source:" }
+                                    Text {
+                                        font.pixelSize: 13
+                                        color: "#1a73e8"
+                                        text: appUrl
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: Qt.openUrlExternally(appUrl)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Files / Paths / Cache ─────────────────────────
+                        Item {
+                            Column {
+                                id: cacheInfoCol
+                                anchors {
+                                    top: parent.top; topMargin: 20
+                                    left: parent.left; leftMargin: 20
+                                    right: parent.right; rightMargin: 20
+                                }
+                                spacing: 8
+
+                                Text {
+                                    width: parent.width
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                    text: "Tile Cache"
+                                }
+                                Text {
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: 12
+                                    color: "#444444"
+                                    text: "If old watermarked tiles appear after changing the tile " +
+                                          "provider, clear the disk cache:"
+                                }
+                                Text {
+                                    width: parent.width
+                                    wrapMode: Text.WrapAnywhere
+                                    font.pixelSize: 12
+                                    font.family: "monospace"
+                                    color: "#222222"
+                                    text: "~/Library/Caches/QtLocation/5.8/tiles/osm/"
+                                }
+                                Rectangle { width: parent.width; height: 1; color: "#cccccc" }
+                                Text {
+                                    width: parent.width
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                    text: "Search Paths"
+                                }
+                                Text {
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: 12
+                                    color: "#444444"
+                                    text: "Directories to scan for layers.json, grids.json, " +
+                                          "and palettes.json. External entries replace built-in " +
+                                          "entries with the same name."
+                                }
+                            }
+
+                            Rectangle {
+                                id: fileListBox
+                                anchors {
+                                    top: cacheInfoCol.bottom; topMargin: 8
+                                    left: parent.left; leftMargin: 20
+                                    right: parent.right; rightMargin: 20
+                                    bottom: fileListButtons.top; bottomMargin: 8
+                                }
+                                color: "white"
+                                border.color: "#cccccc"
+                                border.width: 1
+                                radius: 3
+                                clip: true
+
+                                ListView {
+                                    id: fileListView
+                                    anchors.fill: parent
+                                    anchors.margins: 2
+                                    clip: true
+                                    model: appSettings.searchPaths
+
+                                    delegate: Rectangle {
+                                        width: fileListView.width
+                                        height: 26
+                                        color: fileListView.currentIndex === index
+                                               ? "#e3f2fd" : "transparent"
+
+                                        Text {
+                                            anchors {
+                                                left: parent.left; leftMargin: 8
+                                                verticalCenter: parent.verticalCenter
+                                            }
+                                            text: modelData
+                                            font.pixelSize: 12
+                                            font.family: "monospace"
+                                            elide: Text.ElideLeft
+                                            width: parent.width - 16
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: fileListView.currentIndex = index
+                                        }
+                                    }
+                                }
+                            }
+
+                            Row {
+                                id: fileListButtons
+                                anchors {
+                                    bottom: parent.bottom; bottomMargin: 12
+                                    left: parent.left; leftMargin: 20
+                                }
+                                spacing: 6
+
+                                Button {
+                                    text: "Add…"
+                                    height: 26
+                                    font.pixelSize: 11
+                                    onClicked: folderPickerDialog.open()
+                                }
+                                Button {
+                                    text: "Remove"
+                                    height: 26
+                                    font.pixelSize: 11
+                                    enabled: fileListView.currentIndex >= 0 &&
+                                             fileListView.count > 0
+                                    onClicked: {
+                                        var idx = fileListView.currentIndex
+                                        if (idx >= 0) {
+                                            var paths = appSettings.searchPaths.slice()
+                                            paths.splice(idx, 1)
+                                            appSettings.setSearchPaths(paths)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── License / API Keys ────────────────────────────
+                        Item {
+                            Column {
+                                anchors {
+                                    top: parent.top; topMargin: 20
+                                    left: parent.left; leftMargin: 20
+                                    right: parent.right; rightMargin: 20
+                                }
+                                spacing: 12
+
+                                Text {
+                                    width: parent.width
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                    text: "API Keys"
+                                }
+                                Text {
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: 12
+                                    color: "#444444"
+                                    text: "Enter API keys for data endpoints. Changes take effect " +
+                                          "on the next tile fetch."
+                                }
+                                Rectangle { width: parent.width; height: 1; color: "#cccccc" }
+                                Text {
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    text: "SUN API Key"
+                                }
+                                TextField {
+                                    id: sunApiKeyField
+                                    width: parent.width
+                                    placeholderText: "Enter SUN API key…"
+                                    font.pixelSize: 12
+                                    font.family: "monospace"
+                                    echoMode: TextInput.Password
+                                }
+                                Row {
+                                    spacing: 6
+                                    Button {
+                                        text: "Show"
+                                        height: 26
+                                        font.pixelSize: 11
+                                        checkable: true
+                                        onCheckedChanged: {
+                                            sunApiKeyField.echoMode = checked
+                                                ? TextInput.Normal
+                                                : TextInput.Password
+                                        }
+                                    }
+                                    Button {
+                                        text: "Save"
+                                        height: 26
+                                        font.pixelSize: 11
+                                        onClicked: {
+                                            // TODO: persist via QSettings
+                                            appLogger.append("API key updated (restart required)")
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -813,6 +1083,16 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+    }
+
+    // ── AppSettings signal handlers ──────────────────────────────────────────
+    Connections {
+        target: appSettings
+        function onSearchPathsChanged(paths) {
+            // LayerManager and GridManager are reloaded in main.cpp via C++
+            // connection; reload palettes here so the overlay updates too.
+            overlay.reloadPalettes(paths)
         }
     }
 

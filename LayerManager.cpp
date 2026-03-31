@@ -1,6 +1,5 @@
 #include "LayerManager.h"
 
-#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QJsonArray>
@@ -11,18 +10,56 @@
 
 // ─── Construction ─────────────────────────────────────────────────────────────
 
-LayerManager::LayerManager(const QString &layersFilePath,
-                            const QString &apiKey,
-                            QObject *parent)
+LayerManager::LayerManager(const QString &apiKey, QObject *parent)
     : QObject(parent), m_apiKey(apiKey)
 {
-    // Search order: exe dir first (deployed / build run), then source-tree hint.
-    const QString exeDir = QDir(QCoreApplication::applicationDirPath())
-                               .filePath("layers.json");
-    const QString path   = QFile::exists(exeDir) ? exeDir : layersFilePath;
+    QFile f(QStringLiteral(":/data/layers.json"));
+    if (f.open(QIODevice::ReadOnly))
+        m_layers = parseJson(f.readAll(), QStringLiteral(":/data/layers.json"));
+    rebuildVariant();
+}
 
-    m_layers = parseFile(path);
+// ─── reload ───────────────────────────────────────────────────────────────────
 
+void LayerManager::reload(const QStringList &searchPaths)
+{
+    m_layers.clear();
+
+    QFile f(QStringLiteral(":/data/layers.json"));
+    if (f.open(QIODevice::ReadOnly))
+        m_layers = parseJson(f.readAll(), QStringLiteral(":/data/layers.json"));
+
+    for (const QString &dir : searchPaths) {
+        const QString path = QDir(dir).filePath(QStringLiteral("layers.json"));
+        QFile ef(path);
+        if (!ef.open(QIODevice::ReadOnly)) continue;
+        const QVector<LayerDef> extra = parseJson(ef.readAll(), path);
+        for (const LayerDef &def : extra)
+            mergeLayer(def);
+    }
+
+    rebuildVariant();
+    emit layersChanged();
+}
+
+// ─── mergeLayer ───────────────────────────────────────────────────────────────
+
+void LayerManager::mergeLayer(const LayerDef &def)
+{
+    for (LayerDef &existing : m_layers) {
+        if (existing.name == def.name) {
+            existing = def;
+            return;
+        }
+    }
+    m_layers.append(def);
+}
+
+// ─── rebuildVariant ───────────────────────────────────────────────────────────
+
+void LayerManager::rebuildVariant()
+{
+    m_layersVariant.clear();
     for (const LayerDef &ld : std::as_const(m_layers)) {
         m_layersVariant.append(QVariantMap{
             { "name",        ld.name        },
@@ -35,27 +72,22 @@ LayerManager::LayerManager(const QString &layersFilePath,
 
 QVariantList LayerManager::layers() const { return m_layersVariant; }
 
-// ─── File parsing ─────────────────────────────────────────────────────────────
+// ─── JSON parsing ─────────────────────────────────────────────────────────────
 
-QVector<LayerManager::LayerDef> LayerManager::parseFile(const QString &path)
+QVector<LayerManager::LayerDef> LayerManager::parseJson(const QByteArray &data,
+                                                         const QString &src)
 {
     QVector<LayerDef> result;
 
-    QFile f(path);
-    if (!f.open(QIODevice::ReadOnly)) {
-        qWarning("LayerManager: cannot open '%s'", qPrintable(path));
-        return result;
-    }
-
     QJsonParseError err;
-    const QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &err);
+    const QJsonDocument doc = QJsonDocument::fromJson(data, &err);
     if (err.error != QJsonParseError::NoError) {
         qWarning("LayerManager: JSON parse error in '%s': %s",
-                 qPrintable(path), qPrintable(err.errorString()));
+                 qPrintable(src), qPrintable(err.errorString()));
         return result;
     }
     if (!doc.isArray()) {
-        qWarning("LayerManager: '%s' must be a JSON array", qPrintable(path));
+        qWarning("LayerManager: '%s' must be a JSON array", qPrintable(src));
         return result;
     }
 
@@ -84,7 +116,7 @@ QVector<LayerManager::LayerDef> LayerManager::parseFile(const QString &path)
     }
 
     qInfo("LayerManager: loaded %d layer(s) from '%s'",
-          (int)result.size(), qPrintable(path));
+          (int)result.size(), qPrintable(src));
     return result;
 }
 
@@ -103,12 +135,10 @@ void LayerManager::enableLayer(int index)
     const LayerDef &ld = m_layers[index];
 
     if (!ld.hasTwoStage) {
-        // Legacy: emit the tile URL directly (key substituted, no time needed)
         emit layerReady(index, substituteKey(ld.urlPng));
         return;
     }
 
-    // Stage 1: fetch the time-series endpoint to resolve the {t} timestamp
     const QString tmUrl = substituteKey(ld.urlTm);
     QNetworkRequest req{QUrl(tmUrl)};
     req.setHeader(QNetworkRequest::UserAgentHeader, "qt-map1/1.0");
@@ -125,7 +155,6 @@ void LayerManager::enableLayer(int index)
 void LayerManager::disableLayer(int index)
 {
     Q_UNUSED(index)
-    // Overlay teardown wired in a future phase when tile rendering is implemented.
 }
 
 // ─── Stage-1 network reply ────────────────────────────────────────────────────
@@ -152,7 +181,6 @@ void LayerManager::handleTimestampReply(QNetworkReply *reply, int index)
         return;
     }
 
-    // Navigate: seriesInfo → <first product key> → series[0] → fts[0]
     const QJsonObject root       = doc.object();
     const QJsonObject seriesInfo = root.value("seriesInfo").toObject();
 
@@ -161,7 +189,6 @@ void LayerManager::handleTimestampReply(QNetworkReply *reply, int index)
         return;
     }
 
-    // Take the first product key (e.g. "tempFcst") without assuming its name
     const QJsonObject product = seriesInfo.constBegin().value().toObject();
     const QJsonArray  series  = product.value("series").toArray();
 
@@ -180,7 +207,6 @@ void LayerManager::handleTimestampReply(QNetworkReply *reply, int index)
     const qint64 ftsValue = ftsArr.first().toInteger();
     const qint64 tsValue  = seriesObj.value("ts").toInteger();
 
-    // Substitute {k}, {fts}, {ts}; leave {x}, {y}, {z} for the tile fetcher
     const QString tileUrl = substituteKey(m_layers[index].urlPng)
                                 .replace("{fts}", QString::number(ftsValue))
                                 .replace("{ts}",  QString::number(tsValue));
