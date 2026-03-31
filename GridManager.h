@@ -35,6 +35,7 @@ public:
         QString name;
         QString prodCode;
         QString prodName;
+        QString product;    // prodCode:prodName
         QString type;
         QString urlData;   // tile data template
         QString urlTm;     // timing info template (may be empty)

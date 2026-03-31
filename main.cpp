@@ -7,6 +7,7 @@
 #include "LayerManager.h"
 #include "GridManager.h"
 
+
 static const char *kAppVersion = PROJECT_VERSION;
 static const char *kBuildDate  = __DATE__ " " __TIME__;
 static const char *kAppUrl     = "https://github.com/landenlabs/qt-map1";

@@ -7,6 +7,8 @@
 #include <QVector>
 #include <QVariantList>
 
+
+
 // OverlayItem – a transparent QQuickItem that renders per-tile floating-point
 // data grids with an OpenGL/RHI fragment shader (viridis colormap).
 //

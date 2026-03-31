@@ -82,6 +82,7 @@ QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
         gd.urlData   = obj.value("urldata").toString().trimmed();
         gd.urlTm     = obj.value("utltm").toString().trimmed();
         gd.hasTiming = !gd.urlTm.isEmpty();
+        gd.product   = gd.prodCode + ":" + gd.prodName;
 
         if (gd.name.isEmpty() || gd.urlData.isEmpty()) continue;
 
@@ -95,11 +96,11 @@ QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-QString GridManager::substituteKP(const QString &tmpl, const QString &prodCode) const
+QString GridManager::substituteKP(const QString &tmpl, const QString &product) const
 {
     return QString(tmpl)
         .replace("{k}", m_apiKey)
-        .replace("{p}", prodCode);
+        .replace("{p}", product);
 }
 
 // ─── Grid enable / disable ────────────────────────────────────────────────────
@@ -110,7 +111,7 @@ void GridManager::enableGrid(int index)
     const GridDef &gd = m_grids[index];
 
     // Substitute {k} and {p}; leave {rt}, {t}, {z}, {x}, {y} for tile fetcher.
-    const QString endpoint = substituteKP(gd.urlData, gd.prodCode);
+    const QString endpoint = substituteKP(gd.urlData, gd.product);
 
     qInfo("GridManager: grid %d '%s' enabled",
           index, qPrintable(gd.name));

@@ -45,6 +45,8 @@ qt_add_executable(qt-map1
     OverlayItem.cpp
     FloatGridMaterial.h
     FloatGridMaterial.cpp
+    GridLoader.h
+    GridLoader.cpp
     LayerManager.h
     LayerManager.cpp
     GridManager.h
