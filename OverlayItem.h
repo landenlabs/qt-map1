@@ -56,9 +56,10 @@ public:
     // Fire a test fetchTile() request via the embedded GridLoader.
     Q_INVOKABLE void test();
 
-    // Set the active product/type used for live tile fetching.
+    // Set the active product, type, and maximum supported lod for live tile fetching.
     // Call from QML whenever the active grid changes.
-    Q_INVOKABLE void setGridProduct(const QString &product, const QString &type);
+    Q_INVOKABLE void setGridProduct(const QString &product, const QString &type,
+                                    int maxLod = 2);
 
     // Pass screen-space info for every currently-visible tile.
     // Each QVariant must be a QVariantMap with keys:
@@ -104,4 +105,5 @@ private:
     GridTileCache        *m_tileCache   = nullptr;
     QString               m_product;
     QString               m_productType;
+    int                   m_maxLod = 2;
 };

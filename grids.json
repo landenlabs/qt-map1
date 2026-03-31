@@ -1,26 +1,30 @@
-[
-    {
-        "name": "GTemp",
-        "prodCode": "1248",
-        "prodName": "Temperaturesurface",
-        "type": "float4",
-        "urldata": "https://api.weather.com/v2/tiler/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
-        "utltm": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}"
-    },
-    {
-        "name": "GWind",
-        "prodCode": "1248",
-        "prodName": "Temperaturesurface",
-        "type": "float4",
-        "urldata": "https://api.weather.com/v2/tiler/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
-        "utltm": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}"
-    },
-    {
-        "name": "GPress",
-        "prodCode": "1248",
-        "prodName": "Temperaturesurface",
-        "type": "float4",
-        "urldata": "https://api.weather.com/v2/tiler/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
-        "utltm": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}"
-    }
-]
+{
+    "type": "float4",
+    "maxLod": 2,
+    "urldata": "https://api.weather.com/v2/tiler/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
+    "utltm": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}",
+    "urlinfo": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}",
+    "grids": [
+        {
+            "name": "GTemp",
+            "prodCode": "1248",
+            "prodName": "Temperaturesurface",
+            "type": "float4",
+            "maxLod": 14,
+            "comment":"extras lacks meta info, assume 14 LODs",
+            "urldata": "https://api.weather.com/v2/tiler/extras/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
+            "utltm": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}"
+        },
+        {
+            "name": "GWind",
+            "prodCode": "1248",
+            "prodName": "Foo",
+        },
+        {
+            "name": "GPress",
+            "prodCode": "1248",
+            "prodName": "Stuff",
+
+        }
+    ]
+}

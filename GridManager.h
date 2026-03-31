@@ -8,13 +8,14 @@
 // GridManager – loads float-grid overlay definitions from grids.json and
 // handles enabling/disabling each grid overlay.
 //
-// Each entry in grids.json must have:
-//   name      – button label
-//   prodCode  – product code substituted for {p} in URL templates
-//   prodName  – human-readable product name
-//   type      – data type (e.g. "float4")
-//   urldata   – tile data endpoint template: {k} {p} {rt} {t} {z} {x} {y}
-//   utltm     – timing info endpoint template: {k} {p}  (optional)
+// grids.json structure:
+//   Top-level object holds defaults applied to every grid item:
+//     type, maxLod, urldata, utltm, urlinfo
+//   "grids" array holds individual items; any field present on an item
+//   overrides the corresponding top-level default.
+//
+//   Per-item required fields: name, prodCode, prodName
+//   Per-item optional overrides: type, maxLod, urldata, utltm, urlinfo, comment
 //
 // QML usage:
 //   gridManager.grids           – model for the Repeater (name, prodCode, …)
@@ -35,11 +36,14 @@ public:
         QString name;
         QString prodCode;
         QString prodName;
-        QString product;    // prodCode:prodName
+        QString product;    // prodCode:prodName (derived)
         QString type;
-        QString urlData;   // tile data template
-        QString urlTm;     // timing info template (may be empty)
-        bool    hasTiming;
+        QString urlData;    // tile data template
+        QString urlTm;      // timing info template (may be empty)
+        QString urlInfo;    // metadata info template (may be empty)
+        QString comment;    // human-readable description / notes
+        bool    hasTiming = false;
+        int     maxLod    = 2;
     };
 
     // gridsFilePath – primary path to grids.json (compile-time source path;

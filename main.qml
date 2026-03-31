@@ -821,7 +821,7 @@ ApplicationWindow {
             overlay.endpoint = endpoint
             // Tell the overlay which product is active so drawTile can fetch real data
             var grid = gridManager.grids[index]
-            overlay.setGridProduct(grid.product, grid.type)
+            overlay.setGridProduct(grid.product, grid.type, grid.maxLod)
             overlay.drawTile(0, 0, 0)
             updateOverlayTiles()
             overlay.visible = true

@@ -36,9 +36,12 @@ GridManager::GridManager(const QString &gridsFilePath,
             { "name",      gd.name      },
             { "prodCode",  gd.prodCode  },
             { "prodName",  gd.prodName  },
-            { "product",   gd.product   },   // "prodCode:prodName" – used by GridTileCache
+            { "product",   gd.product   },
             { "type",      gd.type      },
+            { "comment",   gd.comment   },
+            { "maxLod",    gd.maxLod    },
             { "hasTiming", gd.hasTiming },
+            { "urlInfo",   gd.urlInfo   },
         });
     }
 }
@@ -48,6 +51,24 @@ GridManager::GridManager(const QString &gridsFilePath,
 QVariantList GridManager::grids() const { return m_gridsVariant; }
 
 // ─── File parsing ─────────────────────────────────────────────────────────────
+
+// Helper: return item value if present and non-empty, else the default value.
+static QString jsonString(const QJsonObject &obj, const QString &key,
+                          const QString &def = QString())
+{
+    const QJsonValue v = obj.value(key);
+    if (v.isString()) {
+        const QString s = v.toString().trimmed();
+        if (!s.isEmpty()) return s;
+    }
+    return def;
+}
+
+static int jsonInt(const QJsonObject &obj, const QString &key, int def)
+{
+    const QJsonValue v = obj.value(key);
+    return v.isDouble() ? v.toInt(def) : def;
+}
 
 QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
 {
@@ -66,26 +87,58 @@ QVector<GridManager::GridDef> GridManager::parseFile(const QString &path)
                  qPrintable(path), qPrintable(err.errorString()));
         return result;
     }
-    if (!doc.isArray()) {
-        qWarning("GridManager: '%s' must be a JSON array", qPrintable(path));
+    if (!doc.isObject()) {
+        qWarning("GridManager: '%s' root must be a JSON object", qPrintable(path));
         return result;
     }
 
-    for (const QJsonValue &v : doc.array()) {
+    const QJsonObject root = doc.object();
+
+    // ── Top-level defaults ────────────────────────────────────────────────────
+    GridDef defaults;
+    defaults.type    = jsonString(root, "type",    QStringLiteral("float4"));
+    defaults.urlData = jsonString(root, "urldata");
+    defaults.urlTm   = jsonString(root, "utltm");
+    defaults.urlInfo = jsonString(root, "urlinfo");
+    defaults.maxLod  = jsonInt   (root, "maxLod",  2);
+
+    // ── Grid items ────────────────────────────────────────────────────────────
+    const QJsonArray items = root.value(QStringLiteral("grids")).toArray();
+    if (items.isEmpty()) {
+        qWarning("GridManager: no 'grids' array found in '%s'", qPrintable(path));
+        return result;
+    }
+
+    for (const QJsonValue &v : items) {
         if (!v.isObject()) continue;
         const QJsonObject obj = v.toObject();
 
         GridDef gd;
-        gd.name      = obj.value("name").toString().trimmed();
-        gd.prodCode  = obj.value("prodCode").toString().trimmed();
-        gd.prodName  = obj.value("prodName").toString().trimmed();
-        gd.type      = obj.value("type").toString().trimmed();
-        gd.urlData   = obj.value("urldata").toString().trimmed();
-        gd.urlTm     = obj.value("utltm").toString().trimmed();
-        gd.hasTiming = !gd.urlTm.isEmpty();
-        gd.product   = gd.prodCode + ":" + gd.prodName;
+        // Required per-item fields
+        gd.name     = jsonString(obj, "name");
+        gd.prodCode = jsonString(obj, "prodCode");
+        gd.prodName = jsonString(obj, "prodName");
+        if (gd.name.isEmpty() || gd.prodCode.isEmpty()) {
+            qWarning("GridManager: skipping grid entry missing 'name' or 'prodCode'");
+            continue;
+        }
 
-        if (gd.name.isEmpty() || gd.urlData.isEmpty()) continue;
+        // Optional per-item overrides; fall back to top-level defaults
+        gd.type    = jsonString(obj, "type",    defaults.type);
+        gd.urlData = jsonString(obj, "urldata", defaults.urlData);
+        gd.urlTm   = jsonString(obj, "utltm",   defaults.urlTm);
+        gd.urlInfo = jsonString(obj, "urlinfo",  defaults.urlInfo);
+        gd.comment = jsonString(obj, "comment");
+        gd.maxLod  = jsonInt   (obj, "maxLod",  defaults.maxLod);
+
+        gd.hasTiming = !gd.urlTm.isEmpty();
+        gd.product   = gd.prodCode + QLatin1Char(':') + gd.prodName;
+
+        if (gd.urlData.isEmpty()) {
+            qWarning("GridManager: skipping '%s' — no urldata (no default either)",
+                     qPrintable(gd.name));
+            continue;
+        }
 
         result.append(gd);
     }

@@ -48,7 +48,7 @@ OverlayItem::OverlayItem(QQuickItem *parent) : QQuickItem(parent)
                      const QVector<QVector<float>> &grid) {
         qInfo("OverlayItem: tileReady product=%s tile=%d,%d,%d grid=%dx%d",
               qPrintable(product), x, y, z,
-              grid.size(), grid.isEmpty() ? 0 : grid[0].size());
+              (int)grid.size(), grid.isEmpty() ? 0 : (int)grid[0].size());
     });
     connect(m_gridLoader, &GridLoader::tileError,
             this, [](const QString &product, const QString &message) {
@@ -106,10 +106,11 @@ void OverlayItem::setDataMax(float v)
 
 // ─── setGridProduct ───────────────────────────────────────────────────────────
 
-void OverlayItem::setGridProduct(const QString &product, const QString &type)
+void OverlayItem::setGridProduct(const QString &product, const QString &type, int maxLod)
 {
     m_product     = product;
     m_productType = type;
+    m_maxLod      = maxLod;
 }
 
 // ─── test ────────────────────────────────────────────────────────────────────
@@ -130,7 +131,7 @@ void OverlayItem::test()
 
 void OverlayItem::drawTile(int z, int x, int y)
 {
-    if (z <= 2 && !m_product.isEmpty()) {
+    if (z <= m_maxLod && !m_product.isEmpty()) {
         m_tileCache->requestTileImage(m_product, m_productType, z, x, y);
     } else {
         m_pendingImages[kTestKey] = makeTestGrid(256, 256);
@@ -175,7 +176,7 @@ void OverlayItem::setVisibleTiles(const QVariantList &tiles)
 
         // Request tile data for lod levels the API supports (z ≤ 2).
         if (!m_product.isEmpty()) {
-            if (ti.z <= 2) {
+            if (ti.z <= m_maxLod) {
                 m_tileCache->requestTileImage(m_product, m_productType,
                                               ti.z, ti.x, ti.y);
             } else if (!m_pendingImages.contains(kTestKey)) {
