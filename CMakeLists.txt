@@ -47,6 +47,8 @@ qt_add_executable(qt-map1
     FloatGridMaterial.cpp
     LayerManager.h
     LayerManager.cpp
+    GridManager.h
+    GridManager.cpp
 )
 
 qt_add_qml_module(qt-map1
@@ -71,6 +73,7 @@ target_compile_definitions(qt-map1 PRIVATE
     PROJECT_VERSION="${PROJECT_VERSION}"
     SUN_API_KEY="${SUN_API_KEY}"
     LAYERS_FILE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/layers.json"
+    GRIDS_FILE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/grids.json"
 )
 
 target_link_libraries(qt-map1 PRIVATE

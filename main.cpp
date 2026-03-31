@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include "OverlayItem.h"
 #include "LayerManager.h"
+#include "GridManager.h"
 
 static const char *kAppVersion = PROJECT_VERSION;
 static const char *kBuildDate  = __DATE__ " " __TIME__;
@@ -32,6 +33,11 @@ int main(int argc, char *argv[])
     LayerManager layerManager(QLatin1String(LAYERS_FILE_PATH),
                               QLatin1String(kSunApiKey));
     engine.rootContext()->setContextProperty("layerManager", &layerManager);
+
+    // GridManager reads grids.json and is exposed to QML as gridManager.
+    GridManager gridManager(QLatin1String(GRIDS_FILE_PATH),
+                            QLatin1String(kSunApiKey));
+    engine.rootContext()->setContextProperty("gridManager", &gridManager);
 
     const QUrl url(QStringLiteral("qrc:/qt/qml/MapApp/main.qml"));
     QObject::connect(

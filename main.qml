@@ -610,32 +610,75 @@ ApplicationWindow {
             }
 
             // ---------------------------------------------------------------
-            // Overlay toggle buttons – vertical strip along the right edge
+            // Bottom-centre button panel – horizontal row, centred.
+            // Wraps only when the map is narrower than the total button width.
+            //
+            // Width is computed from model counts and fixed button sizes rather
+            // than from Flow.implicitWidth, which would create a binding loop
+            // (Flow uses width to compute layout → sets implicitWidth → width
+            // re-evaluates → Qt zeros the width → buttons stack vertically).
             // ---------------------------------------------------------------
-            Column {
-                id: overlayPanel
+            Flow {
+                id: bottomButtonPanel
                 anchors {
-                    top: parent.top
-                    right: parent.right
-                    topMargin: 10 + 36 + 4 + 36 + 12
-                    rightMargin: 10
+                    bottom: tileGridBtn.top
+                    horizontalCenter: parent.horizontalCenter
+                    bottomMargin: 6
                 }
+                // Natural single-row width: grid buttons (64 px) + layer buttons
+                // (54 px) + spacing between every button (4 px each gap).
+                // Capped at the map width so Flow wraps on very narrow windows.
+                width: Math.min(
+                    gridManager.grids.length   * 64 +
+                    layerManager.layers.length * 54 +
+                    Math.max(0, gridManager.grids.length + layerManager.layers.length - 1) * 4,
+                    parent.width)
                 spacing: 4
+                layoutDirection: Qt.LeftToRight
 
-                Button {
-                    id: gridOverlayBtn
-                    width: 54; height: 36
-                    text: "Grid"
-                    highlighted: overlay.visible
-                    onClicked: {
-                        if (!overlay.visible) {
-                            overlay.drawTile(0, 0, 0)
-                            updateOverlayTiles()
+                // Grid buttons – from grids.json, pill-shaped teal with orange border
+                Repeater {
+                    id: gridRepeater
+                    model: gridManager.grids
+
+                    delegate: Button {
+                        required property var modelData
+                        required property int index
+
+                        width: 64; height: 30
+                        text: modelData.name
+
+                        property bool gridActive: false
+                        highlighted: gridActive
+
+                        background: Rectangle {
+                            color: parent.highlighted ? "#00897b" : "#26a69a"
+                            radius: height / 2
+                            border.color: "#ff8c00"
+                            border.width: 2
                         }
-                        overlay.visible = !overlay.visible
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 11
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                        }
+
+                        onClicked: {
+                            gridActive = !gridActive
+                            if (gridActive) {
+                                gridManager.enableGrid(index)
+                            } else {
+                                gridManager.disableGrid(index)
+                                overlay.visible = false
+                            }
+                        }
                     }
                 }
 
+                // Layer buttons – from layers.json, rounded rect with purple border
                 Repeater {
                     id: layerRepeater
                     model: layerManager.layers
@@ -649,6 +692,13 @@ ApplicationWindow {
 
                         property bool layerActive: false
                         highlighted: layerActive
+
+                        background: Rectangle {
+                            color: parent.highlighted ? "#ede7f6" : "#f0f0f0"
+                            radius: 4
+                            border.color: "#9c27b0"
+                            border.width: 2
+                        }
 
                         onClicked: {
                             layerActive = !layerActive
@@ -668,6 +718,7 @@ ApplicationWindow {
             // Tile-boundary grid toggle – bottom right
             // ---------------------------------------------------------------
             Button {
+                id: tileGridBtn
                 anchors {
                     bottom: parent.bottom
                     right: parent.right
@@ -739,6 +790,28 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+    }
+
+    // ── GridManager signal handlers ──────────────────────────────────────────
+    Connections {
+        target: gridManager
+
+        function onGridReady(index, endpoint) {
+            appLogger.append("Grid " + index + " ready: " + endpoint)
+            overlay.endpoint = endpoint
+            overlay.drawTile(0, 0, 0)
+            updateOverlayTiles()
+            overlay.visible = true
+            var btn = gridRepeater.itemAt(index)
+            if (btn) btn.gridActive = true
+        }
+
+        function onGridError(index, errorMessage) {
+            appLogger.append("Grid " + index + " error: " + errorMessage)
+            overlay.visible = false
+            var btn = gridRepeater.itemAt(index)
+            if (btn) btn.gridActive = false
         }
     }
 
