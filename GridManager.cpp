@@ -36,6 +36,7 @@ GridManager::GridManager(const QString &gridsFilePath,
             { "name",      gd.name      },
             { "prodCode",  gd.prodCode  },
             { "prodName",  gd.prodName  },
+            { "product",   gd.product   },   // "prodCode:prodName" – used by GridTileCache
             { "type",      gd.type      },
             { "hasTiming", gd.hasTiming },
         });

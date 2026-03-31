@@ -134,6 +134,7 @@ void GridLoader::fetchTile(const QString &product,
 
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("qt-map1/1.0"));
+    req.setRawHeader("Accept", "application/json");
 
     QNetworkReply *reply = m_network.get(req);
 
@@ -223,13 +224,35 @@ void GridLoader::handleInfoReply(QNetworkReply *reply,
     // Mirrors: meta logging
     const QJsonObject meta  = prodEntry.value(QStringLiteral("meta")).toObject();
     const QJsonObject attrs = meta.value(QStringLiteral("attributes")).toObject();
-    qInfo("GridLoader: product=%s  rt=%s  t=%s",
+    qInfo("GridLoader: Info product=%s  rt=%s  t=%s",
           qPrintable(pending.product), qPrintable(rt), qPrintable(t));
     qInfo("  description=%s  dataType=%s  units=%s  missing=%s",
           qPrintable(meta.value(QStringLiteral("description")).toString()),
           qPrintable(meta.value(QStringLiteral("dataType")).toString()),
           qPrintable(attrs.value(QStringLiteral("units")).toString()),
           qPrintable(attrs.value(QStringLiteral("missing_value")).toString()));
+
+    // Extract lod range from meta -> tileset -> "Web Mercator" -> tiles
+    const QJsonArray wmTiles = meta.value(QStringLiteral("tileset"))
+                                   .toObject()
+                                   .value(QStringLiteral("Web Mercator"))
+                                   .toObject()
+                                   .value(QStringLiteral("tiles"))
+                                   .toArray();
+
+    if (!wmTiles.isEmpty()) {
+        int lodMin = INT_MAX;
+        int lodMax = INT_MIN;
+        for (const QJsonValue &entry : wmTiles) {
+            const int lod = entry.toObject().value(QStringLiteral("lod")).toInt();
+            if (lod < lodMin) lodMin = lod;
+            if (lod > lodMax) lodMax = lod;
+        }
+        qInfo("  Web Mercator lod range: %d – %d  (%lld tiles)",
+              lodMin, lodMax, static_cast<long long>(wmTiles.size()));
+    } else {
+        qInfo("  Web Mercator tileset not found in meta");
+    }
 
     // Stage 2: make_binary_request – build tile URL and fetch raw bytes.
     // Mirrors: tile_url = SUN_DATA_URL + f"?products={product}&rt={rt}&t={t}
@@ -248,6 +271,11 @@ void GridLoader::handleInfoReply(QNetworkReply *reply,
 
     QNetworkRequest tileReq(tileUrl);
     tileReq.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("qt-map1/1.0"));
+    tileReq.setRawHeader("Accept", "application/octet-stream");
+    // Request uncompressed data: Qt sends Accept-Encoding:gzip by default,
+    // which would silently corrupt the raw binary float4 payload if the server
+    // honours it, and can also cause the server to return 406.
+    tileReq.setRawHeader("Accept-Encoding", "identity");
 
     QNetworkReply *tileReply = m_network.get(tileReq);
     connect(tileReply, &QNetworkReply::finished, this, [this, tileReply, pending]() {

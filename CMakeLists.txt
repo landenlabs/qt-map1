@@ -51,6 +51,8 @@ qt_add_executable(qt-map1
     LayerManager.cpp
     GridManager.h
     GridManager.cpp
+    GridTileCache.h
+    GridTileCache.cpp
 )
 
 qt_add_qml_module(qt-map1

@@ -24,6 +24,10 @@ public:
     Q_INVOKABLE void append(const QString &message);
     Q_INVOKABLE void clear();
 
+    // Same as append() but does NOT write to stdout.
+    // Called by the Qt message handler, which writes to stdout itself.
+    Q_INVOKABLE void appendSilent(const QString &message);
+
 signals:
     void textChanged();
 

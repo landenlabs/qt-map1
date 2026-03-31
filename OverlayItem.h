@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QImage>
 #include <QNetworkAccessManager>
 #include <QQuickItem>
@@ -7,18 +8,21 @@
 #include <QVector>
 #include <QVariantList>
 
-
+class GridLoader;
+class GridTileCache;
 
 // OverlayItem – a transparent QQuickItem that renders per-tile floating-point
 // data grids with an OpenGL/RHI fragment shader (viridis colormap).
 //
 // Rendering is driven by two independent inputs:
-//   1. drawTile()       — supplies the float-data image (test grid or fetched tile)
-//   2. setVisibleTiles()— supplies the screen-space rect for every visible tile
+//   1. setVisibleTiles() — called on every pan/zoom; carries screen-space rects
+//      AND tile coordinates (z,x,y).  For z ≤ 2 with an active product it also
+//      triggers a GridTileCache fetch so each tile gets its own texture.
+//   2. drawTile()        — requests a single tile image (initial load or test).
 //
-// QML calls setVisibleTiles() on every pan/zoom so the quads stay aligned with
-// the underlying OSM tiles.  One QSGGeometryNode is created per visible tile;
-// all nodes share a single QSGTexture held in the root TileGridRootNode.
+// Per-tile textures: TileGridRootNode holds a QHash<key, QSGTexture> so each
+// visible tile quad can display independent data.  Tiles whose texture has not
+// yet arrived are skipped; they appear as soon as onTileImageReady fires.
 
 class OverlayItem : public QQuickItem
 {
@@ -30,6 +34,12 @@ class OverlayItem : public QQuickItem
     Q_PROPERTY(float    dataMax  READ dataMax  WRITE setDataMax  NOTIFY dataMaxChanged)
 
 public:
+    // Tile descriptor: screen-space rect + tile grid coordinates.
+    struct TileInfo {
+        QRectF screenRect;
+        int    z, x, y;
+    };
+
     explicit OverlayItem(QQuickItem *parent = nullptr);
     ~OverlayItem() override;
 
@@ -38,13 +48,23 @@ public:
     float    dataMin()  const;  void setDataMin(float v);
     float    dataMax()  const;  void setDataMax(float v);
 
-    // Generate the float-data image for one tile (phase 1: static test grid).
+    // Request a tile image.
+    // z ≤ 2 with an active product → fetched via GridTileCache.
+    // Otherwise → static test grid.
     Q_INVOKABLE void drawTile(int z, int x, int y);
 
-    // Pass the screen-space rects for every currently-visible tile.
-    // Called from QML after each pan/zoom using map.fromCoordinate() results.
-    // Each QVariant must be a QRectF (i.e. Qt.rect(...) from QML).
-    Q_INVOKABLE void setVisibleTiles(const QVariantList &rects);
+    // Fire a test fetchTile() request via the embedded GridLoader.
+    Q_INVOKABLE void test();
+
+    // Set the active product/type used for live tile fetching.
+    // Call from QML whenever the active grid changes.
+    Q_INVOKABLE void setGridProduct(const QString &product, const QString &type);
+
+    // Pass screen-space info for every currently-visible tile.
+    // Each QVariant must be a QVariantMap with keys:
+    //   "z" (int), "x" (int), "y" (int), "rect" (QRectF / Qt.rect)
+    // Called from QML after each pan/zoom; also triggers tile fetches.
+    Q_INVOKABLE void setVisibleTiles(const QVariantList &tiles);
 
 signals:
     void mapItemChanged();
@@ -63,16 +83,25 @@ private slots:
 private:
     static QImage makeTestGrid(int w, int h);
 
+    // Called by GridTileCache when a tile image is ready.
+    void onTileImageReady(const QString &product, int z, int x, int y,
+                          const QImage &image);
+
     QObject *m_mapItem  = nullptr;
     QString  m_endpoint;
     float    m_dataMin  = 0.0f;
     float    m_dataMax  = 1.0f;
 
-    // GUI-thread state handed to the render thread during SG sync
-    QImage          m_pendingImage;   // new image to upload → texture
-    QVector<QRectF> m_tileRects;      // current visible tile screen rects
-    bool            m_imageDirty = false;  // new image pending
-    bool            m_rectsDirty = false;  // tile positions changed
+    // GUI-thread state handed to the render thread during SG sync.
+    // m_pendingImages: new images to upload to GPU textures, keyed by tile key.
+    QHash<QString, QImage> m_pendingImages;
+    QVector<TileInfo>      m_tileInfos;      // current visible tiles
+    bool                   m_imageDirty = false;
+    bool                   m_rectsDirty = false;
 
     QNetworkAccessManager m_network;
+    GridLoader           *m_gridLoader  = nullptr;
+    GridTileCache        *m_tileCache   = nullptr;
+    QString               m_product;
+    QString               m_productType;
 };

@@ -39,7 +39,7 @@ ApplicationWindow {
         var tyMax = Math.min(n - 1, Math.floor((1.0 - Math.log(Math.tan(se.latitude * Math.PI / 180.0)
                             + 1.0 / Math.cos(se.latitude * Math.PI / 180.0)) / Math.PI) / 2.0 * n))
 
-        var rects = []
+        var tiles = []
         for (var tx = txMin; tx <= txMax; tx++) {
             for (var ty = tyMin; ty <= tyMax; ty++) {
                 var lonL = tx       / n * 360.0 - 180.0
@@ -52,11 +52,14 @@ ApplicationWindow {
 
                 // Only render overlay on tiles where (x + y) is even (checkerboard)
                 if ((tx + ty) % 2 === 0)
-                    rects.push(Qt.rect(ptTL.x, ptTL.y,
-                                       ptBR.x - ptTL.x, ptBR.y - ptTL.y))
+                    tiles.push({
+                        z: z, x: tx, y: ty,
+                        rect: Qt.rect(ptTL.x, ptTL.y,
+                                      ptBR.x - ptTL.x, ptBR.y - ptTL.y)
+                    })
             }
         }
-        overlay.setVisibleTiles(rects)
+        overlay.setVisibleTiles(tiles)
     }
 
     // Refresh tile positions for all visible weather layer overlays
@@ -618,10 +621,24 @@ ApplicationWindow {
             // (Flow uses width to compute layout → sets implicitWidth → width
             // re-evaluates → Qt zeros the width → buttons stack vertically).
             // ---------------------------------------------------------------
+            Button {
+                id: testBtn
+                anchors {
+                    bottom: tileGridBtn.top
+                    right: parent.right
+                    rightMargin: 10
+                    bottomMargin: 4
+                }
+                text: "Test"
+                height: 30
+                font.pixelSize: 11
+                onClicked: overlay.test()
+            }
+
             Flow {
                 id: bottomButtonPanel
                 anchors {
-                    bottom: tileGridBtn.top
+                    bottom: testBtn.top
                     horizontalCenter: parent.horizontalCenter
                     bottomMargin: 6
                 }
@@ -771,16 +788,18 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     ScrollBar.vertical.policy: ScrollBar.AlwaysOn
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
                     TextArea {
                         id: logArea
                         readOnly: true
                         selectByMouse: true
+                        textFormat: TextEdit.RichText
                         text: appLogger.text
                         color: "#cccccc"
                         font.family: "monospace"
                         font.pixelSize: 12
-                        wrapMode: TextArea.NoWrap
+                        wrapMode: TextArea.WrapAnywhere
                         background: Rectangle { color: "#1a1a1a" }
                         padding: 6
                         leftPadding: 10
@@ -800,6 +819,9 @@ ApplicationWindow {
         function onGridReady(index, endpoint) {
             appLogger.append("Grid " + index + " ready: " + endpoint)
             overlay.endpoint = endpoint
+            // Tell the overlay which product is active so drawTile can fetch real data
+            var grid = gridManager.grids[index]
+            overlay.setGridProduct(grid.product, grid.type)
             overlay.drawTile(0, 0, 0)
             updateOverlayTiles()
             overlay.visible = true
