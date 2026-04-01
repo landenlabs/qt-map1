@@ -3,9 +3,9 @@
 #include "GridLoader.h"
 #include "GridTileCache.h"
 
-#include <QSGGeometryNode>
-#include <QSGGeometry>
 #include <QQuickWindow>
+#include <QSGGeometry>
+#include <QSGGeometryNode>
 #include <cmath>
 
 // Special key used for the fallback test-grid texture (z > maxLod or no product).
@@ -16,9 +16,10 @@ static const QString kTestKey = QStringLiteral("__test__");
 // Owns all QSGTextures: per-tile data textures keyed by tile key, and the
 // single shared palette strip.
 
-struct TileGridRootNode : public QSGNode {
-    QHash<QString, QSGTexture *> textures;      // per-tile data textures
-    QSGTexture                  *paletteTexture = nullptr;  // shared palette strip
+struct TileGridRootNode : public QSGNode
+{
+    QHash<QString, QSGTexture *> textures; // per-tile data textures
+    QSGTexture *paletteTexture = nullptr;  // shared palette strip
 
     ~TileGridRootNode() {
         for (QSGTexture *t : std::as_const(textures))
@@ -29,31 +30,28 @@ struct TileGridRootNode : public QSGNode {
 
 // ─── Construction / destruction ──────────────────────────────────────────────
 
-OverlayItem::OverlayItem(QQuickItem *parent) : QQuickItem(parent)
-{
+OverlayItem::OverlayItem(QQuickItem *parent)
+    : QQuickItem(parent) {
     setFlag(ItemHasContents, true);
 
     m_tileCache = new GridTileCache(QLatin1String(SUN_API_KEY), 64 * 1024 * 1024, this);
-    connect(m_tileCache, &GridTileCache::tileImageReady,
-            this,        &OverlayItem::onTileImageReady);
-    connect(m_tileCache, &GridTileCache::tileImageError,
-            this, [](const QString &product, int z, int x, int y, const QString &msg) {
-        qWarning("OverlayItem: tileImageError product=%s z=%d x=%d y=%d: %s",
-                 qPrintable(product), z, x, y, qPrintable(msg));
+    connect(m_tileCache, &GridTileCache::tileImageReady, this, &OverlayItem::onTileImageReady);
+    connect(m_tileCache, &GridTileCache::tileImageError, this, [](const QString &product, int z, int x, int y, const QString &msg) {
+        qWarning("OverlayItem: tileImageError product=%s z=%d x=%d y=%d: %s", qPrintable(product), z, x, y, qPrintable(msg));
     });
 
     m_gridLoader = new GridLoader(QLatin1String(SUN_API_KEY), this);
-    connect(m_gridLoader, &GridLoader::tileReady,
-            this, [](const QString &product, int x, int y, int z,
-                     const QVector<QVector<float>> &grid) {
+    connect(m_gridLoader, &GridLoader::tileReady, this, [](const QString &product, int x, int y, int z, const QVector<QVector<float>> &grid) {
         qInfo("OverlayItem: tileReady product=%s tile=%d,%d,%d grid=%dx%d",
-              qPrintable(product), x, y, z,
-              (int)grid.size(), grid.isEmpty() ? 0 : (int)grid[0].size());
+              qPrintable(product),
+              x,
+              y,
+              z,
+              (int) grid.size(),
+              grid.isEmpty() ? 0 : (int) grid[0].size());
     });
-    connect(m_gridLoader, &GridLoader::tileError,
-            this, [](const QString &product, const QString &message) {
-        qWarning("OverlayItem: tileError product=%s: %s",
-                 qPrintable(product), qPrintable(message));
+    connect(m_gridLoader, &GridLoader::tileError, this, [](const QString &product, const QString &message) {
+        qWarning("OverlayItem: tileError product=%s: %s", qPrintable(product), qPrintable(message));
     });
 }
 
@@ -61,50 +59,51 @@ OverlayItem::~OverlayItem() = default;
 
 // ─── Properties ──────────────────────────────────────────────────────────────
 
-QObject *OverlayItem::mapItem() const { return m_mapItem; }
-void OverlayItem::setMapItem(QObject *item)
-{
-    if (m_mapItem == item) return;
-    if (m_mapItem) disconnect(m_mapItem, nullptr, this, nullptr);
+QObject *OverlayItem::mapItem() const {
+    return m_mapItem;
+}
+void OverlayItem::setMapItem(QObject *item) {
+    if (m_mapItem == item)
+        return;
+    if (m_mapItem)
+        disconnect(m_mapItem, nullptr, this, nullptr);
     m_mapItem = item;
     if (m_mapItem) {
-        connect(m_mapItem, SIGNAL(centerChanged(QGeoCoordinate)),
-                this, SLOT(onMapViewportChanged()));
-        connect(m_mapItem, SIGNAL(zoomLevelChanged(double)),
-                this, SLOT(onMapViewportChanged()));
+        connect(m_mapItem, SIGNAL(centerChanged(QGeoCoordinate)), this, SLOT(onMapViewportChanged()));
+        connect(m_mapItem, SIGNAL(zoomLevelChanged(double)), this, SLOT(onMapViewportChanged()));
     }
     emit mapItemChanged();
 }
 
-QString OverlayItem::endpoint() const { return m_endpoint; }
-void OverlayItem::setEndpoint(const QString &url)
-{
-    if (m_endpoint == url) return;
+QString OverlayItem::endpoint() const {
+    return m_endpoint;
+}
+void OverlayItem::setEndpoint(const QString &url) {
+    if (m_endpoint == url)
+        return;
     m_endpoint = url;
     emit endpointChanged();
 }
 
 // ─── setGridProduct ───────────────────────────────────────────────────────────
 
-void OverlayItem::setGridProduct(const QString &product, const QString &type,
-                                  int maxLod,
-                                  const QString &urlInfo, const QString &urlData,
-                                  const QString &paletteName)
-{
-    m_product     = product;
+void OverlayItem::setGridProduct(
+        const QString &product, const QString &type, int maxLod, const QString &urlInfo, const QString &urlData, const QString &paletteName
+) {
+    m_product = product;
     m_productType = type;
-    m_maxLod      = maxLod;
-    m_urlInfo     = urlInfo;
-    m_urlData     = urlData;
+    m_maxLod = maxLod;
+    m_urlInfo = urlInfo;
+    m_urlData = urlData;
     m_paletteName = paletteName;
 
     const PaletteManager::PaletteInfo *pal = m_paletteManager.palette(paletteName);
     if (pal) {
-        m_paletteScale    = pal->scale;
-        m_paletteOffset   = pal->offset;
+        m_paletteScale = pal->scale;
+        m_paletteOffset = pal->offset;
         m_paletteNumSteps = pal->numSteps;
-        m_paletteImage    = pal->image;
-        m_paletteDirty    = true;
+        m_paletteImage = pal->image;
+        m_paletteDirty = true;
         update();
     } else {
         qWarning("OverlayItem: palette '%s' not found", qPrintable(paletteName));
@@ -113,25 +112,24 @@ void OverlayItem::setGridProduct(const QString &product, const QString &type,
 
 // ─── test ────────────────────────────────────────────────────────────────────
 
-void OverlayItem::test()
-{
+void OverlayItem::test() {
     qInfo("OverlayItem::test — calling GridLoader::fetchTile");
     m_gridLoader->fetchTile(
-        m_product.isEmpty() ? QStringLiteral("1248:Temperaturesurface") : m_product,
-        m_productType.isEmpty() ? QStringLiteral("float4") : m_productType,
-        m_urlInfo, m_urlData,
-        /*x=*/2, /*y=*/2, /*z=*/2);
+            m_product.isEmpty() ? QStringLiteral("1248:Temperaturesurface") : m_product,
+            m_productType.isEmpty() ? QStringLiteral("float4") : m_productType,
+            m_urlInfo,
+            m_urlData,
+            /*x=*/2,
+            /*y=*/2,
+            /*z=*/2
+    );
 }
 
 // ─── drawTile ────────────────────────────────────────────────────────────────
 
-void OverlayItem::drawTile(int z, int x, int y)
-{
+void OverlayItem::drawTile(int z, int x, int y) {
     if (z <= m_maxLod && !m_product.isEmpty()) {
-        m_tileCache->requestTileImage(m_product, m_productType,
-                                      m_urlInfo, m_urlData,
-                                      m_paletteScale, m_paletteOffset, m_paletteNumSteps,
-                                      z, x, y);
+        m_tileCache->requestTileImage(m_product, m_productType, m_urlInfo, m_urlData, m_paletteScale, m_paletteOffset, m_paletteNumSteps, z, x, y);
     } else {
         m_pendingImages[kTestKey] = makeTestGrid(256, 256);
         m_imageDirty = true;
@@ -141,9 +139,7 @@ void OverlayItem::drawTile(int z, int x, int y)
 
 // ─── onTileImageReady ─────────────────────────────────────────────────────────
 
-void OverlayItem::onTileImageReady(const QString &product, int z, int x, int y,
-                                   const QImage &image)
-{
+void OverlayItem::onTileImageReady(const QString &product, int z, int x, int y, const QImage &image) {
     const QString key = GridTileCache::tileKey(product, z, x, y);
     m_pendingImages[key] = image;
     m_imageDirty = true;
@@ -152,8 +148,7 @@ void OverlayItem::onTileImageReady(const QString &product, int z, int x, int y,
 
 // ─── setVisibleTiles ─────────────────────────────────────────────────────────
 
-void OverlayItem::setVisibleTiles(const QVariantList &tiles)
-{
+void OverlayItem::setVisibleTiles(const QVariantList &tiles) {
     m_tileInfos.clear();
     m_tileInfos.reserve(tiles.size());
 
@@ -168,10 +163,9 @@ void OverlayItem::setVisibleTiles(const QVariantList &tiles)
 
         if (!m_product.isEmpty()) {
             if (ti.z <= m_maxLod) {
-                m_tileCache->requestTileImage(m_product, m_productType,
-                                              m_urlInfo, m_urlData,
-                                              m_paletteScale, m_paletteOffset, m_paletteNumSteps,
-                                              ti.z, ti.x, ti.y);
+                m_tileCache->requestTileImage(
+                        m_product, m_productType, m_urlInfo, m_urlData, m_paletteScale, m_paletteOffset, m_paletteNumSteps, ti.z, ti.x, ti.y
+                );
             } else if (!m_pendingImages.contains(kTestKey)) {
                 m_pendingImages[kTestKey] = makeTestGrid(256, 256);
                 m_imageDirty = true;
@@ -185,8 +179,7 @@ void OverlayItem::setVisibleTiles(const QVariantList &tiles)
 
 // ─── Static test grid ────────────────────────────────────────────────────────
 
-QImage OverlayItem::makeTestGrid(int w, int h)
-{
+QImage OverlayItem::makeTestGrid(int w, int h) {
     std::vector<float> grid(w * h);
     for (int row = 0; row < h; ++row) {
         const float ny = (float(row) / float(h - 1)) * 2.0f * float(M_PI);
@@ -195,7 +188,7 @@ QImage OverlayItem::makeTestGrid(int w, int h)
             float v = 0.5f * (std::sin(nx * 3.0f) * std::cos(ny * 2.0f) + 1.0f);
             const float dx = float(col) / float(w) - 0.5f;
             const float dy = float(row) / float(h) - 0.5f;
-            const float g  = std::exp(-(dx * dx + dy * dy) / (2.0f * 0.08f * 0.08f));
+            const float g = std::exp(-(dx * dx + dy * dy) / (2.0f * 0.08f * 0.08f));
             v = std::clamp(v * 0.35f + g * 0.65f, 0.0f, 1.0f);
             grid[row * w + col] = v;
         }
@@ -212,8 +205,7 @@ QImage OverlayItem::makeTestGrid(int w, int h)
 
 // ─── Viewport change ─────────────────────────────────────────────────────────
 
-void OverlayItem::onMapViewportChanged()
-{
+void OverlayItem::onMapViewportChanged() {
     update();
 }
 
@@ -224,8 +216,7 @@ void OverlayItem::onMapViewportChanged()
 //     QSGGeometryNode [tile 0]    material → non-owning data + palette texture ptrs
 //     QSGGeometryNode [tile 1]    ...
 
-QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
-{
+QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     if (m_tileInfos.isEmpty()) {
         delete oldNode;
         return nullptr;
@@ -234,8 +225,8 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
     auto *root = static_cast<TileGridRootNode *>(oldNode);
     if (!root) {
         root = new TileGridRootNode;
-        m_imageDirty   = true;
-        m_rectsDirty   = true;
+        m_imageDirty = true;
+        m_rectsDirty = true;
         m_paletteDirty = true;
     }
 
@@ -247,7 +238,7 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
         root->paletteTexture->setHorizontalWrapMode(QSGTexture::ClampToEdge);
         root->paletteTexture->setVerticalWrapMode(QSGTexture::ClampToEdge);
         m_paletteDirty = false;
-        m_rectsDirty   = true;
+        m_rectsDirty = true;
     }
 
     // ── Upload any pending data images to GPU textures ───────────────────────
@@ -277,9 +268,7 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
         }
 
         for (const TileInfo &ti : std::as_const(m_tileInfos)) {
-            const QString key = m_product.isEmpty()
-                ? kTestKey
-                : GridTileCache::tileKey(m_product, ti.z, ti.x, ti.y);
+            const QString key = m_product.isEmpty() ? kTestKey : GridTileCache::tileKey(m_product, ti.z, ti.x, ti.y);
 
             QSGTexture *tex = root->textures.value(key, nullptr);
             if (!tex)
@@ -292,8 +281,7 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
             const float x1 = float(ti.screenRect.right());
             const float y1 = float(ti.screenRect.bottom());
 
-            auto *geo = new QSGGeometry(
-                QSGGeometry::defaultAttributes_TexturedPoint2D(), 4);
+            auto *geo = new QSGGeometry(QSGGeometry::defaultAttributes_TexturedPoint2D(), 4);
             geo->setDrawingMode(QSGGeometry::DrawTriangleStrip);
             QSGGeometry::TexturedPoint2D *vp = geo->vertexDataAsTexturedPoint2D();
             vp[0].set(x0, y0, 0.f, 0.f);
@@ -302,8 +290,8 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
             vp[3].set(x1, y1, 1.f, 1.f);
 
             auto *mat = new FloatGridMaterial;
-            mat->texture        = tex;                   // non-owning
-            mat->paletteTexture = root->paletteTexture;  // non-owning
+            mat->texture = tex;                         // non-owning
+            mat->paletteTexture = root->paletteTexture; // non-owning
 
             auto *node = new QSGGeometryNode;
             node->setGeometry(geo);
@@ -321,8 +309,7 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
 
 // ─── reloadPalettes ───────────────────────────────────────────────────────────
 
-void OverlayItem::reloadPalettes(const QStringList &searchPaths)
-{
+void OverlayItem::reloadPalettes(const QStringList &searchPaths) {
     m_paletteManager.reload(searchPaths);
 
     // Re-apply the current palette so the overlay updates without requiring
@@ -330,18 +317,17 @@ void OverlayItem::reloadPalettes(const QStringList &searchPaths)
     if (!m_paletteName.isEmpty()) {
         const PaletteManager::PaletteInfo *pal = m_paletteManager.palette(m_paletteName);
         if (pal) {
-            m_paletteScale    = pal->scale;
-            m_paletteOffset   = pal->offset;
+            m_paletteScale = pal->scale;
+            m_paletteOffset = pal->offset;
             m_paletteNumSteps = pal->numSteps;
-            m_paletteImage    = pal->image;
-            m_paletteDirty    = true;
+            m_paletteImage = pal->image;
+            m_paletteDirty = true;
             update();
         }
     }
 }
 
-void OverlayItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
-{
+void OverlayItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) {
     QQuickItem::geometryChange(newGeometry, oldGeometry);
     if (newGeometry.size() != oldGeometry.size())
         update();

@@ -3,20 +3,19 @@
 #include <QTime>
 #include <cstdio>
 
-Logger::Logger(QObject *parent) : QObject(parent) {}
+Logger::Logger(QObject *parent)
+    : QObject(parent) {}
 
-QString Logger::text() const { return m_text; }
-
-// Build one HTML line: yellow fixed-width timestamp + HTML-escaped message body.
-static QString buildHtmlLine(const QString &ts, const QString &message)
-{
-    return QStringLiteral("<span style=\"color:#ffff00;\">[") + ts
-         + QStringLiteral("]</span> ")
-         + message.toHtmlEscaped();
+QString Logger::text() const {
+    return m_text;
 }
 
-void Logger::append(const QString &message)
-{
+// Build one HTML line: yellow fixed-width timestamp + HTML-escaped message body.
+static QString buildHtmlLine(const QString &ts, const QString &message) {
+    return QStringLiteral("<span style=\"color:#ffff00;\">[") + ts + QStringLiteral("]</span> ") + message.toHtmlEscaped();
+}
+
+void Logger::append(const QString &message) {
     const QString ts = QTime::currentTime().toString("HH:mm:ss");
 
     fprintf(stdout, "[%s] %s\n", qPrintable(ts), qPrintable(message));
@@ -29,8 +28,7 @@ void Logger::append(const QString &message)
     emit textChanged();
 }
 
-void Logger::appendSilent(const QString &message)
-{
+void Logger::appendSilent(const QString &message) {
     const QString ts = QTime::currentTime().toString("HH:mm:ss");
 
     if (!m_text.isEmpty())
@@ -40,8 +38,7 @@ void Logger::appendSilent(const QString &message)
     emit textChanged();
 }
 
-void Logger::clear()
-{
+void Logger::clear() {
     m_text.clear();
     emit textChanged();
 }
