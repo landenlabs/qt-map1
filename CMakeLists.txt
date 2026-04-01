@@ -66,6 +66,8 @@ qt_add_executable(qt-map1
     GridTileCache.cpp
     PaletteManager.h
     PaletteManager.cpp
+    PinManager.h
+    PinManager.cpp
 )
 
 qt_add_qml_module(qt-map1

@@ -25,50 +25,15 @@ ApplicationWindow {
 
     // ── Push-pin state ───────────────────────────────────────────────────────
     property string activePinColor: ""    // "" = no active pin color
-    property int    currentPinIndex: -1  // index in pinModel of last placed pin
-
-    ListModel { id: pinModel }
-
-    function savePins() {
-        var arr = []
-        for (var i = 0; i < pinModel.count; i++) {
-            var p = pinModel.get(i)
-            arr.push({ name: p.name, lat: p.lat, lon: p.lon, pinColor: p.pinColor })
-        }
-        appSettings.setMapPins(JSON.stringify(arr))
-    }
-
-    function loadPins() {
-        pinModel.clear()
-        currentPinIndex = -1
-        try {
-            var data = JSON.parse(appSettings.mapPins)
-            if (Array.isArray(data)) {
-                for (var i = 0; i < data.length; i++) {
-                    var e = data[i]
-                    pinModel.append({
-                        name:     e.name     || "",
-                        lat:      e.lat      || 0,
-                        lon:      e.lon      || 0,
-                        pinColor: e.pinColor || "#cc3333"
-                    })
-                }
-            }
-        } catch(err) {
-            appLogger.append("Pins load error: " + err)
-        }
-    }
+    property int    currentPinIndex: -1  // index into pinManager.pins of last placed pin
 
     // When the active color changes, update the most recently placed pin
     onActivePinColorChanged: {
         if (activePinColor !== "" &&
-                currentPinIndex >= 0 && currentPinIndex < pinModel.count) {
-            pinModel.setProperty(currentPinIndex, "pinColor", activePinColor)
-            savePins()
+                currentPinIndex >= 0 && currentPinIndex < pinManager.pins.length) {
+            pinManager.setPinColor(currentPinIndex, activePinColor)
         }
     }
-
-    Component.onCompleted: loadPins()
 
     // -----------------------------------------------------------------------
     // Shared helpers
@@ -316,7 +281,7 @@ ApplicationWindow {
                 // Map pins placed by the search bar
                 // -------------------------------------------------------
                 MapItemView {
-                    model: pinModel
+                    model: pinManager.pins
                     delegate: MapQuickItem {
                         required property int    index
                         required property string name
@@ -1101,10 +1066,9 @@ ApplicationWindow {
                                 onClicked: {
                                     pinColorPopup.close()
                                     if (clr === "__reset__") {
-                                        pinModel.clear()
+                                        pinManager.clear()
                                         root.currentPinIndex = -1
                                         root.activePinColor = ""
-                                        root.savePins()
                                     } else {
                                         root.activePinColor = clr
                                     }
@@ -1154,13 +1118,12 @@ ApplicationWindow {
                     }
                     onClicked: {
                         var idx = pinRemovePopup.targetIndex
-                        if (idx >= 0 && idx < pinModel.count) {
+                        if (idx >= 0 && idx < pinManager.pins.length) {
                             if (root.currentPinIndex === idx)
                                 root.currentPinIndex = -1
                             else if (root.currentPinIndex > idx)
                                 root.currentPinIndex -= 1
-                            pinModel.remove(idx)
-                            root.savePins()
+                            pinManager.removePin(idx)
                         }
                         pinRemovePopup.close()
                     }
@@ -1222,14 +1185,8 @@ ApplicationWindow {
                         searchField.text = results[0].display_name
                         // Place a new pin if a color is active
                         if (root.activePinColor !== "") {
-                            pinModel.append({
-                                name:     results[0].display_name,
-                                lat:      lat,
-                                lon:      lon,
-                                pinColor: root.activePinColor
-                            })
-                            root.currentPinIndex = pinModel.count - 1
-                            root.savePins()
+                            pinManager.addPin(results[0].display_name, lat, lon, root.activePinColor)
+                            root.currentPinIndex = pinManager.pins.length - 1
                         }
                     }
                     xhr.send()

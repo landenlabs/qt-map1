@@ -90,6 +90,7 @@ public:
 
     QString mapPins()  const;
     void    setMapPins(const QString &json);
+    void    verifyMapPins(const QString &json);
 
     double  lastCenterLat() const;
     double  lastCenterLon() const;

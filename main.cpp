@@ -11,6 +11,7 @@
 #include "LayerManager.h"
 #include "Logger.h"
 #include "OverlayItem.h"
+#include "PinManager.h"
 
 // ── Qt message handler ────────────────────────────────────────────────────────
 // Routes qInfo() and qWarning() to both stdout and the in-app log panel.
@@ -58,6 +59,9 @@ int main(int argc, char *argv[]) {
     // Passes built-in key metadata so expiry can be computed at construction.
     AppSettings appSettings(QLatin1String(kSunApiKey), kExpiryDays, kBuildUnixTime);
     engine.rootContext()->setContextProperty("appSettings", &appSettings);
+
+    PinManager pinManager(&appSettings);
+    engine.rootContext()->setContextProperty("pinManager", &pinManager);
 
     // LayerManager and GridManager load from compiled-in resources then apply
     // any saved search paths so external overrides are active from first run.

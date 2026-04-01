@@ -75,7 +75,15 @@ void AppSettings::setMapPins(const QString &json) {
         return;
     m_mapPins = json;
     m_settings.setValue(QStringLiteral("mapPins"), json);
-    emit mapPinsChanged(json);
+    // emit mapPinsChanged(json);
+}
+
+void AppSettings::verifyMapPins(const QString &json) {
+
+    auto saved = m_settings.value(QStringLiteral("mapPins"), QStringLiteral("[]")).toString();
+    if (json != saved) {
+        setMapPins(json);
+    }
 }
 
 // ─── lastCenter ───────────────────────────────────────────────────────────────
