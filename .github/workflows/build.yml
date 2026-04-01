@@ -1,0 +1,126 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  # macOS – Apple Silicon runner, Qt 6.8, universal clang_64 package
+  # ────────────────────────────────────────────────────────────────
+  build-macos:
+    name: Build (macOS)
+    runs-on: macos-13          # x86-64; Qt 6 clang_64 package is universal
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.0'
+          host: 'mac'
+          target: 'desktop'
+          arch: 'clang_64'
+          modules: 'qtlocation qtshadertools'
+          cache: true
+
+      # secrets.cmake is gitignored; recreate it from the repository secret.
+      # The build falls back to an empty key if the secret is not configured.
+      - name: Create secrets.cmake
+        run: |
+          printf 'set(SUN_API_KEY "%s")\n'       "$SUN_API_KEY"        > secrets.cmake
+          printf 'set(SUN_API_KEY_EXPIRY_DAYS %s)\n' "30"             >> secrets.cmake
+        env:
+          SUN_API_KEY: ${{ secrets.SUN_API_KEY }}
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      # macdeployqt copies Qt frameworks into the bundle and creates a DMG.
+      # -qmldir=. lets it scan the source tree for QML import dependencies.
+      - name: Deploy
+        run: |
+          APP="build/qt-map1.app"
+          macdeployqt "$APP" -qmldir=. -dmg
+          # macdeployqt writes the DMG alongside the .app
+          mv build/qt-map1.dmg qt-map1-macos.dmg
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt-map1-macos
+          path: qt-map1-macos.dmg
+
+      # Attach to GitHub Release when triggered by a published release event
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: qt-map1-macos.dmg
+
+  # ────────────────────────────────────────────────────────────────
+  # Windows – MSVC 2022, Qt 6.8
+  # ────────────────────────────────────────────────────────────────
+  build-windows:
+    name: Build (Windows)
+    runs-on: windows-latest    # Visual Studio 2022 pre-installed
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.0'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+          modules: 'qtlocation qtshadertools'
+          cache: true
+
+      - name: Create secrets.cmake
+        shell: pwsh
+        run: |
+          $key = if ($env:SUN_API_KEY) { $env:SUN_API_KEY } else { "" }
+          Set-Content  -Path secrets.cmake -Value "set(SUN_API_KEY `"$key`")"
+          Add-Content  -Path secrets.cmake -Value "set(SUN_API_KEY_EXPIRY_DAYS 30)"
+        env:
+          SUN_API_KEY: ${{ secrets.SUN_API_KEY }}
+
+      # Use the Visual Studio 2022 generator; no extra vcvarsall setup required.
+      - name: Configure
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      # windeployqt copies Qt DLLs, plugins, and QML modules next to the exe.
+      - name: Deploy
+        shell: pwsh
+        run: |
+          $exePath = "build\Release\qt-map1.exe"
+          $deployDir = "deploy"
+          New-Item -ItemType Directory -Path $deployDir | Out-Null
+          Copy-Item $exePath $deployDir
+          windeployqt --qmldir . --release "$deployDir\qt-map1.exe"
+          Compress-Archive -Path "$deployDir\*" -DestinationPath qt-map1-windows.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt-map1-windows
+          path: qt-map1-windows.zip
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: qt-map1-windows.zip
