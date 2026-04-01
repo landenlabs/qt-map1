@@ -1,16 +1,19 @@
 [
     {
         "name": "Temp",
+        "comment": "Temperature forecast — colour-coded surface temperature tiles",
         "urlpng": "https://api.weather.com/v3/TileServer/tile?product=tempFcst&apiKey={k}&xyz={x}:{y}:{z}&ts={ts}&fts={fts}",
         "urltm": "https://api.weather.com/v3/TileServer/series/productSet?productSet=atak&filter=tempFcst&apiKey={k}"
     },
     {
         "name": "Radar",
+        "comment": "Radar forecast — animated precipitation radar tiles",
         "urlpng": "https://api.weather.com/v3/TileServer/tile?product=radarFcst&apiKey={k}&xyz={x}:{y}:{z}&ts={ts}&fts={fts}",
         "urltm": "https://api.weather.com/v3/TileServer/series/productSet?productSet=atak&filter=radarFcst&apiKey={k}"
     },
     {
         "name": "Wind",
+        "comment": "Wind speed forecast — nautical-miles wind speed overlay",
         "urlpng": "https://api.weather.com/v3/TileServer/tile?product=windSpeedFcstNM&apiKey={k}&xyz={x}:{y}:{z}&ts={ts}&fts={fts}",
         "urltm": "https://api.weather.com/v3/TileServer/series/productSet?productSet=atak&filter=windSpeedFcstNM&apiKey={k}"
     }

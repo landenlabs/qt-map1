@@ -85,6 +85,14 @@ qt_add_resources(qt-map1 "app_data"
         palettes.json
 )
 
+qt_add_resources(qt-map1 "app_images"
+    PREFIX "/images"
+    FILES
+        landenlabs.png
+        grid128.png
+        test.jpeg
+)
+
 qt_add_shaders(qt-map1 "floatgrid_shaders"
     BATCHABLE          # rewrites vertex shader with _qt_order attribute for SG batching
     GLSL "440"

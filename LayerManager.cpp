@@ -67,6 +67,7 @@ void LayerManager::rebuildVariant()
     for (const LayerDef &ld : std::as_const(m_layers)) {
         m_layersVariant.append(QVariantMap{
             { "name",        ld.name        },
+            { "comment",     ld.comment     },
             { "hasTwoStage", ld.hasTwoStage },
         });
     }
@@ -100,9 +101,10 @@ QVector<LayerManager::LayerDef> LayerManager::parseJson(const QByteArray &data,
         const QJsonObject obj = v.toObject();
 
         LayerDef ld;
-        ld.name   = obj.value("name").toString().trimmed();
-        ld.urlPng = obj.value("urlpng").toString().trimmed();
-        ld.urlTm  = obj.value("urltm").toString().trimmed();
+        ld.name    = obj.value("name").toString().trimmed();
+        ld.urlPng  = obj.value("urlpng").toString().trimmed();
+        ld.urlTm   = obj.value("urltm").toString().trimmed();
+        ld.comment = obj.value("comment").toString().trimmed();
 
         if (ld.name.isEmpty()) continue;
 

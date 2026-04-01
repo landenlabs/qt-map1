@@ -33,6 +33,7 @@ public:
         QString name;
         QString urlPng;
         QString urlTm;
+        QString comment;
         bool    hasTwoStage;
     };
 

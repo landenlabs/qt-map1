@@ -21,7 +21,10 @@
       "WebFetch(domain:doc.qt.io)",
       "Bash(find /opt/homebrew/Cellar/qtlocation -name *.h)",
       "WebSearch",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/dennislang/opt/projects/qt-projects/qt-map1/screens/landenlabs.png)",
+      "Bash(sips -g all /Users/dennislang/opt/projects/qt-projects/qt-map1/screens/landenlabs.png)",
+      "Bash(sips:*)"
     ]
   }
 }

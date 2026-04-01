@@ -12,7 +12,7 @@ ApplicationWindow {
     width: 1280
     height: 800
     title: {
-        var base = "Qt Map Viewer  v" + appVersion
+        var base = "LanDen Labs - Map Viewer  v" + appVersion
         if (appSettings.userKeyActive)
             return base + "  [licensed]"
         var d = appSettings.daysRemaining
@@ -364,7 +364,7 @@ ApplicationWindow {
             // ---------------------------------------------------------------
             Dialog {
                 id: aboutDialog
-                title: "Qt Map Viewer"
+                title: "LanDen Labs - Map Viewer"
                 modal: true
                 anchors.centerIn: parent
                 width: 680
@@ -467,12 +467,31 @@ ApplicationWindow {
                                 }
                                 spacing: 10
 
+                                Rectangle {
+                                    width: 80; height: 80
+                                    color: "#2c3e50"
+                                    radius: 8
+
+                                    Image {
+                                        anchors.fill: parent
+                                        anchors.margins: 6
+                                        source: "qrc:/images/landenlabs.png"
+                                        fillMode: Image.PreserveAspectFit
+                                        smooth: true
+                                        onStatusChanged: {
+                                            if (status === Image.Error)
+                                                appLogger.append("Logo load failed: " + source)
+                                            else if (status === Image.Ready)
+                                                appLogger.append("Logo loaded OK: " + source)
+                                        }
+                                    }
+                                }
                                 Text {
                                     width: parent.width
                                     wrapMode: Text.WordWrap
                                     font.pixelSize: 15
                                     font.bold: true
-                                    text: "Qt Map Viewer"
+                                    text: "LanDen Labs - Map Viewer"
                                 }
                                 Text {
                                     width: parent.width
@@ -790,25 +809,83 @@ ApplicationWindow {
             }
 
             // ---------------------------------------------------------------
-            // Help button – upper left
-            // Green tint when user has a valid API key; red tint when expired.
+            // Top-left toolbar: About / Tile-grid / Test
             // ---------------------------------------------------------------
-            RoundButton {
-                text: "?"
-                width: 36; height: 36
+            Row {
                 anchors {
                     top: parent.top
                     left: parent.left
                     margins: 10
                 }
-                background: Rectangle {
-                    radius: width / 2
-                    color: appSettings.userKeyActive  ? "#a5d6a7" :
-                           appSettings.daysRemaining < 0 ? "#ef9a9a" : "#e0e0e0"
-                    border.color: Qt.darker(color, 1.3)
-                    border.width: 1
+                spacing: 6
+
+                // About – green when licensed, red when expired
+                RoundButton {
+                    text: "?"
+                    width: 36; height: 36
+                    background: Rectangle {
+                        radius: width / 2
+                        color: appSettings.userKeyActive      ? "#a5d6a7" :
+                               appSettings.daysRemaining < 0  ? "#ef9a9a" : "#e0e0e0"
+                        border.color: Qt.darker(color, 1.3)
+                        border.width: 1
+                    }
+                    ToolTip.visible: hovered
+                    ToolTip.delay:   600
+                    ToolTip.text:    "About / Settings"
+                    onClicked: aboutDialog.open()
                 }
-                onClicked: aboutDialog.open()
+
+                // Tile-grid toggle – blue tint when active
+                RoundButton {
+                    width: 36; height: 36
+                    background: Rectangle {
+                        radius: width / 2
+                        color: tileGridCanvas.visible ? "#bbdefb" : "#e0e0e0"
+                        border.color: Qt.darker(color, 1.3)
+                        border.width: 1
+                    }
+                    Image {
+                        anchors.centerIn: parent
+                        width: parent.width - 8; height: parent.height - 8
+                        source: "qrc:/images/grid128.png"
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                    }
+                    ToolTip.visible: hovered
+                    ToolTip.delay:   600
+                    ToolTip.text:    "Toggle tile grid overlay"
+                    onClicked: tileGridCanvas.visible = !tileGridCanvas.visible
+                }
+
+                // Test – load first grid entry and call overlay.test()
+                RoundButton {
+                    width: 36; height: 36
+                    background: Rectangle {
+                        radius: width / 2
+                        color: "#e0e0e0"
+                        border.color: Qt.darker(color, 1.3)
+                        border.width: 1
+                    }
+                    Image {
+                        anchors.centerIn: parent
+                        width: parent.width - 8; height: parent.height - 8
+                        source: "qrc:/images/test.jpeg"
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                    }
+                    ToolTip.visible: hovered
+                    ToolTip.delay:   600
+                    ToolTip.text:    "Load test grid overlay"
+                    onClicked: {
+                        if (gridManager.grids.length > 0) {
+                            var g = gridManager.grids[0]
+                            overlay.setGridProduct(g.product, g.type, g.maxLod,
+                                                   g.urlInfo, g.urlData, g.paletteName)
+                        }
+                        overlay.test()
+                    }
+                }
             }
 
             // ---------------------------------------------------------------
@@ -994,34 +1071,12 @@ ApplicationWindow {
             // (Flow uses width to compute layout → sets implicitWidth → width
             // re-evaluates → Qt zeros the width → buttons stack vertically).
             // ---------------------------------------------------------------
-            Button {
-                id: testBtn
-                anchors {
-                    bottom: tileGridBtn.top
-                    right: parent.right
-                    rightMargin: 10
-                    bottomMargin: 4
-                }
-                text: "Test"
-                height: 30
-                font.pixelSize: 11
-                onClicked: {
-                    // Use URLs from the first grids.json entry
-                    if (gridManager.grids.length > 0) {
-                        var g = gridManager.grids[0]
-                        overlay.setGridProduct(g.product, g.type, g.maxLod,
-                                               g.urlInfo, g.urlData, g.paletteName)
-                    }
-                    overlay.test()
-                }
-            }
-
             Flow {
                 id: bottomButtonPanel
                 anchors {
-                    bottom: testBtn.top
+                    bottom: parent.bottom
                     horizontalCenter: parent.horizontalCenter
-                    bottomMargin: 6
+                    bottomMargin: 10
                 }
                 // Natural single-row width: grid buttons (64 px) + layer buttons
                 // (54 px) + spacing between every button (4 px each gap).
@@ -1064,6 +1119,10 @@ ApplicationWindow {
                             elide: Text.ElideRight
                         }
 
+                        ToolTip.visible: hovered && modelData.comment.length > 0
+                        ToolTip.delay:   600
+                        ToolTip.text:    modelData.comment
+
                         onClicked: {
                             gridActive = !gridActive
                             if (gridActive) {
@@ -1098,6 +1157,10 @@ ApplicationWindow {
                             border.width: 2
                         }
 
+                        ToolTip.visible: hovered && modelData.comment.length > 0
+                        ToolTip.delay:   600
+                        ToolTip.text:    modelData.comment
+
                         onClicked: {
                             layerActive = !layerActive
                             if (layerActive) {
@@ -1112,22 +1175,6 @@ ApplicationWindow {
                 }
             }
 
-            // ---------------------------------------------------------------
-            // Tile-boundary grid toggle – bottom right
-            // ---------------------------------------------------------------
-            Button {
-                id: tileGridBtn
-                anchors {
-                    bottom: parent.bottom
-                    right: parent.right
-                    margins: 10
-                }
-                text: "Tile grid"
-                height: 30
-                font.pixelSize: 11
-                highlighted: tileGridCanvas.visible
-                onClicked: tileGridCanvas.visible = !tileGridCanvas.visible
-            }
         }
 
         // ── Log pane ──────────────────────────────────────────────────────────
