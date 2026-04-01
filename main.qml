@@ -21,6 +21,55 @@ ApplicationWindow {
         return base + "  [" + d + " day" + (d !== 1 ? "s" : "") + " left]"
     }
 
+    onClosing: appSettings.setLastCenter(map.center.latitude, map.center.longitude)
+
+    // ── Push-pin state ───────────────────────────────────────────────────────
+    property string activePinColor: ""    // "" = no active pin color
+    property int    currentPinIndex: -1  // index in pinModel of last placed pin
+
+    ListModel { id: pinModel }
+
+    function savePins() {
+        var arr = []
+        for (var i = 0; i < pinModel.count; i++) {
+            var p = pinModel.get(i)
+            arr.push({ name: p.name, lat: p.lat, lon: p.lon, pinColor: p.pinColor })
+        }
+        appSettings.setMapPins(JSON.stringify(arr))
+    }
+
+    function loadPins() {
+        pinModel.clear()
+        currentPinIndex = -1
+        try {
+            var data = JSON.parse(appSettings.mapPins)
+            if (Array.isArray(data)) {
+                for (var i = 0; i < data.length; i++) {
+                    var e = data[i]
+                    pinModel.append({
+                        name:     e.name     || "",
+                        lat:      e.lat      || 0,
+                        lon:      e.lon      || 0,
+                        pinColor: e.pinColor || "#cc3333"
+                    })
+                }
+            }
+        } catch(err) {
+            appLogger.append("Pins load error: " + err)
+        }
+    }
+
+    // When the active color changes, update the most recently placed pin
+    onActivePinColorChanged: {
+        if (activePinColor !== "" &&
+                currentPinIndex >= 0 && currentPinIndex < pinModel.count) {
+            pinModel.setProperty(currentPinIndex, "pinColor", activePinColor)
+            savePins()
+        }
+    }
+
+    Component.onCompleted: loadPins()
+
     // -----------------------------------------------------------------------
     // Shared helpers
     // -----------------------------------------------------------------------
@@ -132,8 +181,9 @@ ApplicationWindow {
                     }
                 }
 
-                // Initial view: San Francisco
-                center: QtPositioning.coordinate(37.7749, -122.4194)
+                // Initial view: restored from last session (default San Francisco)
+                center: QtPositioning.coordinate(appSettings.lastCenterLat,
+                                                 appSettings.lastCenterLon)
                 zoomLevel: 12
                 minimumZoomLevel: 2
                 maximumZoomLevel: 19
@@ -144,6 +194,9 @@ ApplicationWindow {
                     target: null
                     onTranslationChanged: (delta) => {
                         map.pan(-delta.x, -delta.y)
+                    }
+                    onActiveChanged: {
+                        if (active) searchBar.searchExpanded = false
                     }
                 }
 
@@ -254,6 +307,92 @@ ApplicationWindow {
                                     var tw    = ctx.measureText(label).width
                                     ctx.fillText(label, cPt.x - tw * 0.5, cPt.y + 5)
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // -------------------------------------------------------
+                // Map pins placed by the search bar
+                // -------------------------------------------------------
+                MapItemView {
+                    model: pinModel
+                    delegate: MapQuickItem {
+                        required property int    index
+                        required property string name
+                        required property real   lat
+                        required property real   lon
+                        required property string pinColor
+
+                        coordinate: QtPositioning.coordinate(lat, lon)
+                        anchorPoint.x: 12
+                        anchorPoint.y: 30
+                        z: 10
+
+                        sourceItem: Item {
+                            id: pinSourceItem
+                            width: 24
+                            height: 32
+
+                            property string pinColorVal: pinColor
+                            property string pinNameVal:  name
+                            property real   pinLatVal:   lat
+                            property real   pinLonVal:   lon
+                            property int    pinIdxVal:   index
+
+                            Canvas {
+                                id: pinCanvas
+                                anchors.fill: parent
+                                property string fillColor: parent.pinColorVal
+                                onFillColorChanged: requestPaint()
+                                Component.onCompleted: requestPaint()
+                                onPaint: {
+                                    var ctx = getContext("2d")
+                                    ctx.clearRect(0, 0, width, height)
+                                    var cx = width / 2
+                                    var r  = width * 0.44
+                                    ctx.fillStyle   = fillColor
+                                    ctx.strokeStyle = Qt.darker(fillColor, 1.5).toString()
+                                    ctx.lineWidth   = 1.5
+                                    ctx.beginPath()
+                                    ctx.moveTo(cx, height - 2)
+                                    ctx.bezierCurveTo(cx - r * 0.3, height * 0.65,
+                                                      cx - r,        r * 1.2,
+                                                      cx - r,        r)
+                                    ctx.arc(cx, r, r, Math.PI, 0, false)
+                                    ctx.bezierCurveTo(cx + r,        r * 1.2,
+                                                      cx + r * 0.3, height * 0.65,
+                                                      cx, height - 2)
+                                    ctx.closePath()
+                                    ctx.fill()
+                                    ctx.stroke()
+                                    ctx.fillStyle = "rgba(255,255,255,0.45)"
+                                    ctx.beginPath()
+                                    ctx.arc(cx, r, r * 0.35, 0, 2 * Math.PI)
+                                    ctx.fill()
+                                }
+                            }
+
+                            MouseArea {
+                                id: pinHoverArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: function(mouse) {
+                                    var gp = mapToGlobal(mouse.x, mouse.y)
+                                    var pp = mapPane.mapFromGlobal(gp.x, gp.y)
+                                    pinRemovePopup.targetIndex = parent.pinIdxVal
+                                    pinRemovePopup.x = pp.x - pinRemovePopup.width / 2
+                                    pinRemovePopup.y = pp.y - pinRemovePopup.height - 6
+                                    pinRemovePopup.open()
+                                }
+                            }
+
+                            ToolTip {
+                                visible: pinHoverArea.containsMouse
+                                text: parent.pinNameVal
+                                      + "\nLat: " + parent.pinLatVal.toFixed(5)
+                                      + "  Lon: " + parent.pinLonVal.toFixed(5)
+                                delay: 400
                             }
                         }
                     }
@@ -889,6 +1028,146 @@ ApplicationWindow {
             }
 
             // ---------------------------------------------------------------
+            // Pin color selector popup (opened by pin icon in search bar)
+            // ---------------------------------------------------------------
+            Popup {
+                id: pinColorPopup
+                width: 150
+                padding: 4
+                modal: false
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                background: Rectangle {
+                    color: "white"
+                    radius: 6
+                    border.color: "#cccccc"
+                    border.width: 1
+                    layer.enabled: true
+                    layer.effect: null
+                }
+
+                Column {
+                    spacing: 2
+                    width: pinColorPopup.width - 8
+
+                    Repeater {
+                        model: ListModel {
+                            ListElement { clr: "";          lbl: "None"   }
+                            ListElement { clr: "#cc3333";   lbl: "Red"    }
+                            ListElement { clr: "#2a9d2a";   lbl: "Green"  }
+                            ListElement { clr: "#1a73e8";   lbl: "Blue"   }
+                            ListElement { clr: "#e8891a";   lbl: "Orange" }
+                            ListElement { clr: "#9c27b0";   lbl: "Purple" }
+                            ListElement { clr: "#d4a017";   lbl: "Yellow" }
+                            ListElement { clr: "#00838f";   lbl: "Cyan"   }
+                            ListElement { clr: "__reset__"; lbl: "Reset"  }
+                        }
+
+                        delegate: Rectangle {
+                            required property string clr
+                            required property string lbl
+                            width: parent.width
+                            height: 28
+                            radius: 4
+                            color: menuArea.containsMouse ? "#e8e8e8" : "transparent"
+
+                            Row {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.leftMargin: 6
+                                spacing: 8
+
+                                Rectangle {
+                                    width: 16; height: 16; radius: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: (clr !== "" && clr !== "__reset__") ? clr : "transparent"
+                                    border.color: (clr !== "" && clr !== "__reset__")
+                                                  ? Qt.darker(clr, 1.4).toString() : "transparent"
+                                    border.width: 1
+                                }
+
+                                Text {
+                                    text: lbl
+                                    font.pixelSize: 13
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: clr === "__reset__" ? "#cc3333" : "#333333"
+                                }
+                            }
+
+                            MouseArea {
+                                id: menuArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    pinColorPopup.close()
+                                    if (clr === "__reset__") {
+                                        pinModel.clear()
+                                        root.currentPinIndex = -1
+                                        root.activePinColor = ""
+                                        root.savePins()
+                                    } else {
+                                        root.activePinColor = clr
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---------------------------------------------------------------
+            // Pin remove popup (opened by clicking a map pin)
+            // ---------------------------------------------------------------
+            Popup {
+                id: pinRemovePopup
+                property int targetIndex: -1
+                width: 110
+                height: 36
+                padding: 0
+                modal: false
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                background: Rectangle {
+                    color: "white"
+                    radius: 6
+                    border.color: "#cccccc"
+                    border.width: 1
+                    layer.enabled: true
+                    layer.effect: null
+                }
+
+                Button {
+                    width: parent.width
+                    height: parent.height
+                    text: "Remove pin"
+                    font.pixelSize: 13
+                    background: Rectangle {
+                        color: parent.hovered ? "#ffe0e0" : "transparent"
+                        radius: 6
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        font: parent.font
+                        color: "#cc3333"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: {
+                        var idx = pinRemovePopup.targetIndex
+                        if (idx >= 0 && idx < pinModel.count) {
+                            if (root.currentPinIndex === idx)
+                                root.currentPinIndex = -1
+                            else if (root.currentPinIndex > idx)
+                                root.currentPinIndex -= 1
+                            pinModel.remove(idx)
+                            root.savePins()
+                        }
+                        pinRemovePopup.close()
+                    }
+                }
+            }
+
+            // ---------------------------------------------------------------
             // Search bar – centred at the top
             // ---------------------------------------------------------------
             Item {
@@ -898,8 +1177,12 @@ ApplicationWindow {
                     horizontalCenter: parent.horizontalCenter
                     topMargin: 10
                 }
-                width: Math.min(480, parent.width - 200)
+                // Collapses to just the two icons when the map is panned
+                property bool searchExpanded: true
+                width: searchExpanded ? Math.min(520, parent.width - 200) : 80
                 height: 36
+
+                Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.InOutQuad } }
 
                 property string searchState: "idle"
                 property string errorText: ""
@@ -934,8 +1217,20 @@ ApplicationWindow {
                         var lon = parseFloat(results[0].lon)
                         map.center = QtPositioning.coordinate(lat, lon)
                         map.zoomLevel = 12
+                        appSettings.setLastCenter(lat, lon)
                         searchState = "found"
                         searchField.text = results[0].display_name
+                        // Place a new pin if a color is active
+                        if (root.activePinColor !== "") {
+                            pinModel.append({
+                                name:     results[0].display_name,
+                                lat:      lat,
+                                lon:      lon,
+                                pinColor: root.activePinColor
+                            })
+                            root.currentPinIndex = pinModel.count - 1
+                            root.savePins()
+                        }
                     }
                     xhr.send()
                 }
@@ -957,18 +1252,121 @@ ApplicationWindow {
 
                     layer.enabled: true
                     layer.effect: null
+
+                    // Tap anywhere on the collapsed bar to expand
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !searchBar.searchExpanded
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: searchBar.searchExpanded = true
+                    }
                 }
 
-                Text {
+                // Push-pin icon – opens the color picker dropdown
+                Item {
+                    id: pinBtn
+                    anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
+                    width: 22; height: 22
+
+                    Canvas {
+                        id: pinBtnCanvas
+                        anchors.fill: parent
+                        property string fillColor: root.activePinColor !== "" ? root.activePinColor : "#888888"
+                        onFillColorChanged: requestPaint()
+                        Component.onCompleted: requestPaint()
+                        onPaint: {
+                            var ctx = getContext("2d")
+                            ctx.clearRect(0, 0, width, height)
+                            var cx = width / 2
+                            var r  = width * 0.38
+                            var col = fillColor
+                            ctx.fillStyle   = col
+                            ctx.strokeStyle = Qt.darker(col, 1.4).toString()
+                            ctx.lineWidth   = 1
+                            ctx.beginPath()
+                            ctx.moveTo(cx, height - 1)
+                            ctx.bezierCurveTo(cx - r * 0.3, height * 0.65,
+                                              cx - r,        r * 1.2,
+                                              cx - r,        r)
+                            ctx.arc(cx, r, r, Math.PI, 0, false)
+                            ctx.bezierCurveTo(cx + r,        r * 1.2,
+                                              cx + r * 0.3, height * 0.65,
+                                              cx, height - 1)
+                            ctx.closePath()
+                            ctx.fill()
+                            ctx.stroke()
+                            ctx.fillStyle = "rgba(255,255,255,0.45)"
+                            ctx.beginPath()
+                            ctx.arc(cx, r, r * 0.35, 0, 2 * Math.PI)
+                            ctx.fill()
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            searchBar.searchExpanded = true
+                            pinColorPopup.x = searchBar.x + pinBtn.x
+                            pinColorPopup.y = searchBar.y + searchBar.height + 4
+                            pinColorPopup.open()
+                        }
+                    }
+                }
+
+                Item {
                     id: searchIcon
-                    anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
-                    text: searchBar.searchState === "searching" ? "…" : "⌕"
-                    font.pixelSize: 17
-                    color: "#666666"
+                    anchors { left: pinBtn.right; leftMargin: 4; verticalCenter: parent.verticalCenter }
+                    width: 22; height: 22
+
+                    // Canvas-drawn magnifier – precise pixel control, no glyph padding
+                    Canvas {
+                        anchors.fill: parent
+                        visible: searchBar.searchState !== "searching"
+                        Component.onCompleted: requestPaint()
+                        onPaint: {
+                            var ctx = getContext("2d")
+                            ctx.clearRect(0, 0, width, height)
+                            var r  = width * 0.30
+                            var cx = width  * 0.40
+                            var cy = height * 0.40
+                            ctx.strokeStyle = "#666666"
+                            ctx.lineWidth   = width * 0.14
+                            ctx.lineCap     = "round"
+                            // Glass circle
+                            ctx.beginPath()
+                            ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+                            ctx.stroke()
+                            // Handle
+                            ctx.beginPath()
+                            ctx.moveTo(cx + r * 0.72, cy + r * 0.72)
+                            ctx.lineTo(width * 0.88, height * 0.88)
+                            ctx.stroke()
+                        }
+                    }
+
+                    // Spinner shown while a search is in flight
+                    Text {
+                        anchors.centerIn: parent
+                        visible: searchBar.searchState === "searching"
+                        text: "…"
+                        font.pixelSize: 18
+                        color: "#666666"
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            searchBar.searchExpanded = true
+                            searchField.forceActiveFocus()
+                        }
+                    }
                 }
 
                 TextField {
                     id: searchField
+                    visible: searchBar.searchExpanded
                     anchors {
                         left: searchIcon.right; leftMargin: 6
                         right: clearBtn.left;   rightMargin: 4
@@ -998,7 +1396,7 @@ ApplicationWindow {
                     text: "✕"
                     font.pixelSize: 13
                     color: "#888888"
-                    visible: searchField.text !== ""
+                    visible: searchBar.searchExpanded && searchField.text !== ""
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
@@ -1105,7 +1503,7 @@ ApplicationWindow {
                         highlighted: gridActive
 
                         background: Rectangle {
-                            color: parent.highlighted ? "#00897b" : "#26a69a"
+                            color: parent.highlighted ? "#4caf50" : "white"
                             radius: height / 2
                             border.color: "#ff8c00"
                             border.width: 2
@@ -1113,7 +1511,7 @@ ApplicationWindow {
                         contentItem: Text {
                             text: parent.text
                             font.pixelSize: 11
-                            color: "white"
+                            color: parent.highlighted ? "white" : "#333333"
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideRight
@@ -1151,10 +1549,18 @@ ApplicationWindow {
                         highlighted: layerActive
 
                         background: Rectangle {
-                            color: parent.highlighted ? "#ede7f6" : "#f0f0f0"
-                            radius: 4
+                            color: parent.highlighted ? "#4caf50" : "white"
+                            radius: height / 2
                             border.color: "#9c27b0"
                             border.width: 2
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 11
+                            color: parent.highlighted ? "white" : "#333333"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
                         }
 
                         ToolTip.visible: hovered && modelData.comment.length > 0

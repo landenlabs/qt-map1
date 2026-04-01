@@ -19,6 +19,15 @@ AppSettings::AppSettings(const QString &builtinApiKey,
     m_sunApiKey = m_settings.value(QStringLiteral("sunApiKey"))
                              .toString();
 
+    m_mapPins = m_settings.value(QStringLiteral("mapPins"),
+                                  QStringLiteral("[]"))
+                           .toString();
+
+    m_lastCenterLat = m_settings.value(QStringLiteral("lastCenterLat"),
+                                        m_lastCenterLat).toDouble();
+    m_lastCenterLon = m_settings.value(QStringLiteral("lastCenterLon"),
+                                        m_lastCenterLon).toDouble();
+
     // Compute how many days remain before the built-in key expires.
     const qint64 now        = QDateTime::currentSecsSinceEpoch();
     const qint64 expiryTime = buildUnixTime + static_cast<qint64>(expiryDays) * 86400LL;
@@ -59,6 +68,33 @@ void AppSettings::setSunApiKey(const QString &key)
     m_sunApiKey = key;
     m_settings.setValue(QStringLiteral("sunApiKey"), key);
     emit sunApiKeyChanged(key);
+}
+
+// ─── mapPins ──────────────────────────────────────────────────────────────────
+
+QString AppSettings::mapPins() const { return m_mapPins; }
+
+void AppSettings::setMapPins(const QString &json)
+{
+    if (m_mapPins == json) return;
+    m_mapPins = json;
+    m_settings.setValue(QStringLiteral("mapPins"), json);
+    emit mapPinsChanged(json);
+}
+
+// ─── lastCenter ───────────────────────────────────────────────────────────────
+
+double AppSettings::lastCenterLat() const { return m_lastCenterLat; }
+double AppSettings::lastCenterLon() const { return m_lastCenterLon; }
+
+void AppSettings::setLastCenter(double lat, double lon)
+{
+    if (m_lastCenterLat == lat && m_lastCenterLon == lon) return;
+    m_lastCenterLat = lat;
+    m_lastCenterLon = lon;
+    m_settings.setValue(QStringLiteral("lastCenterLat"), lat);
+    m_settings.setValue(QStringLiteral("lastCenterLon"), lon);
+    emit lastCenterChanged();
 }
 
 // ─── Derived accessors ────────────────────────────────────────────────────────

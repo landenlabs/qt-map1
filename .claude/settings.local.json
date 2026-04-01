@@ -24,7 +24,19 @@
       "Bash(ls:*)",
       "Bash(sips -g pixelWidth -g pixelHeight /Users/dennislang/opt/projects/qt-projects/qt-map1/screens/landenlabs.png)",
       "Bash(sips -g all /Users/dennislang/opt/projects/qt-projects/qt-map1/screens/landenlabs.png)",
-      "Bash(sips:*)"
+      "Bash(sips:*)",
+      "Bash(cmake --build build)",
+      "Bash(cmake --build /Users/dennislang/opt/projects/qt-projects/qt-map1/build)",
+      "Bash(cmake --build /Users/dennislang/opt/projects/qt-projects/qt-map1/build2)",
+      "Bash(grep -E \"error:|warning:|Error|Warning|Built target qt-map1$\")",
+      "Bash(grep -E \"error:|Error|warning:|Warning|Built target qt-map1$\")",
+      "Bash(defaults read:*)",
+      "Bash(/opt/homebrew/opt/qt/bin/qmake --version)",
+      "Bash(find ~/Library/Preferences -name *qt-map* -o -name *map1*)",
+      "Bash(find ~/Library/Application Support -name *qt-map*)",
+      "Bash(find ~/Library -name qt-map1*)",
+      "Read(//private/var/folders/**)",
+      "Bash(nm /Users/dennislang/opt/projects/qt-projects/qt-map1/build2/qt-map1)"
     ]
   }
 }

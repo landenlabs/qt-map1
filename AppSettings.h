@@ -57,6 +57,19 @@ class AppSettings : public QObject
                READ  daysRemaining
                CONSTANT)
 
+    Q_PROPERTY(QString mapPins
+               READ  mapPins
+               WRITE setMapPins
+               NOTIFY mapPinsChanged)
+
+    Q_PROPERTY(double lastCenterLat
+               READ  lastCenterLat
+               NOTIFY lastCenterChanged)
+
+    Q_PROPERTY(double lastCenterLon
+               READ  lastCenterLon
+               NOTIFY lastCenterChanged)
+
 public:
     explicit AppSettings(const QString &builtinApiKey,
                          int            expiryDays,
@@ -75,6 +88,13 @@ public:
     bool    userKeyActive()  const;   // true when user key is set
     int     daysRemaining()  const;   // days until built-in key expires; <0 = expired
 
+    QString mapPins()  const;
+    void    setMapPins(const QString &json);
+
+    double  lastCenterLat() const;
+    double  lastCenterLon() const;
+    Q_INVOKABLE void setLastCenter(double lat, double lon);
+
     Q_INVOKABLE QString defaultTileUrl()   const;
     Q_INVOKABLE QString effectiveApiKey()  const;  // user key, or built-in if valid, or ""
 
@@ -82,6 +102,8 @@ signals:
     void searchPathsChanged(const QStringList &paths);
     void tileUrlChanged(const QString &url);
     void sunApiKeyChanged(const QString &key);
+    void mapPinsChanged(const QString &json);
+    void lastCenterChanged();
 
 private:
     QSettings   m_settings;
@@ -89,6 +111,10 @@ private:
     QString     m_tileUrl;
     QString     m_sunApiKey;
 
+    QString     m_mapPins;
     QString     m_builtinApiKey;
     int         m_daysRemaining = 0;   // computed once in constructor
+
+    double      m_lastCenterLat =  37.7749;   // San Francisco default
+    double      m_lastCenterLon = -122.4194;
 };

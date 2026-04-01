@@ -4,6 +4,7 @@
     "urldata": "https://api.weather.com/v2/tiler/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
     "utltm": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}",
     "urlinfo": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}",
+    "comment": "Not implemented yet",
     "grids": [
         {
             "name": "GTemp",
@@ -12,7 +13,7 @@
             "type": "float4",
             "maxLod": 14,
             "paletteName": "GTemp",
-            "comment": "extras lacks meta info, assume 14 LODs",
+            "comment": "Surface temperature - upto LOD 14",
             "urldata": "https://api.weather.com/v2/tiler/extras/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
             "utltm": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}"
         },
