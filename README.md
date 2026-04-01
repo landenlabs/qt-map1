@@ -17,14 +17,14 @@ Displays OpenStreetMap tiles with pan, zoom, and an optional floating-point grid
 
 ## Screenshots
 
+Sample map view showing Temperature PNG image tiles
 ![Default Open Street Map screen](screens/screen1.png)
 
-Test Grid as a grey scale image
-![Default Open Street Map screen](screens/test-grid.jpg)
+Map with Temperature and Radar PNG tiles and tile grid lines.
+![Default Open Street Map screen](screens/screen2.png)
 
-
-Test Grid rendered over map for every tile
-![Default Open Street Map screen](screens/grid-overlay1.png)
+About/Info dialog
+![Default Open Street Map screen](screens/screen3.png)
 
 
 ## Requirements
