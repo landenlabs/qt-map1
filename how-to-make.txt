@@ -3,3 +3,25 @@ cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug
 cmake --build . --clean-first -j10
 # cmake --build . -j10
+
+
+⏺ .github/workflows/build.yml is created. Here's what it does:
+
+  Triggers
+  - Every push / PR to main
+  - GitHub Release published events (also attaches the artifacts to the release)
+
+  macOS job (macos-13, Qt 6.8 clang_64)
+  1. Installs Qt 6.8.0 with qtlocation + qtshadertools modules (cached between runs)
+  2. Writes secrets.cmake from the SUN_API_KEY repo secret (empty string if not configured — the CMake fallback handles it)
+  3. cmake -B build -DCMAKE_BUILD_TYPE=Release → cmake --build
+  4. macdeployqt … -qmldir=. -dmg → uploads qt-map1-macos.dmg
+
+  Windows job (windows-latest, Qt 6.8 win64_msvc2022_64)
+  1. Same Qt install, same secrets step
+  2. cmake -G "Visual Studio 17 2022" -A x64 → cmake --build --config Release
+  3. windeployqt --qmldir . --release copies all Qt DLLs/plugins/QML alongside the exe, then zips it → uploads qt-map1-windows.zip
+
+  One thing to configure in your repo settings:
+  - Go to Settings → Secrets and variables → Actions and add SUN_API_KEY if you want the built-in weather key baked in. The build works without it (just shows the "expired" warning).
+  

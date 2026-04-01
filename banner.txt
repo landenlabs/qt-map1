@@ -1,0 +1,3 @@
+//
+// Copyright (C) %YEAR% Dennis Lang / LanDen Labs
+// 
