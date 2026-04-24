@@ -126,6 +126,9 @@ void OverlayItem::test() {
 }
 
 // ─── drawTile ────────────────────────────────────────────────────────────────
+/*
+
+*/
 
 void OverlayItem::drawTile(int z, int x, int y) {
     if (z <= m_maxLod && !m_product.isEmpty()) {
@@ -147,7 +150,34 @@ void OverlayItem::onTileImageReady(const QString &product, int z, int x, int y, 
 }
 
 // ─── setVisibleTiles ─────────────────────────────────────────────────────────
+/*
+  Question - explain flow of who/what/when is OverlayItem::drawTile(z, x, y) called
 
+  Answer
+
+⏺ drawTile(z, x, y) is called from exactly one place and it is a one-off bootstrap call:
+
+  Who: main.qml — the Connections { target: gridManager } block (main.qml:1620)
+
+  When: When gridManager emits onGridReady(index, endpoint) — i.e., after the grid product metadata has been fetched and is ready.
+
+  What it does:
+  gridManager emits gridReady(index, endpoint)
+    → main.qml: onGridReady()
+        overlay.setGridProduct(...)        // sets m_product, m_urlInfo, m_urlData, palette params
+        overlay.drawTile(0, 0, 0)          // ← HERE: bootstrap fetch of tile z=0,x=0,y=0
+        updateOverlayTiles()               // calls setVisibleTiles() for the real viewport tiles
+        overlay.visible = true
+
+  drawTile(0,0,0) is essentially a warm-up / sanity fetch — it requests the zoom-0 world tile immediately
+  after the product is configured, before setVisibleTiles() has computed which tiles are actually visible.
+  It's not part of the normal tile-serving loop.
+
+  The real tile loading path is setVisibleTiles() (called by updateOverlayTiles() in QML), which
+  is what runs whenever the viewport changes and requests all currently-visible tiles
+  via m_tileCache->requestTileImage() in a loop.
+
+*/
 void OverlayItem::setVisibleTiles(const QVariantList &tiles) {
     m_tileInfos.clear();
     m_tileInfos.reserve(tiles.size());

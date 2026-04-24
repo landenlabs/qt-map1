@@ -37,6 +37,49 @@ GridLoaderShader::GridLoaderShader() {
     setShaderFileName(FragmentStage, QStringLiteral(":/shaders/shaders/floatgrid.frag.qsb"));
 }
 
+/*
+  The full pipeline for per-tile texture data:
+
+  1. Network → QImage (GridTileCache)
+  - GridTileCache::requestTileImage() is called by OverlayItem when tiles are needed.
+  - GridLoader fetches the raw float grid over the network.
+  - onTileReady() (GridTileCache.cpp:75) converts it to a Grayscale8 QImage via gridToImage() — this is where float values are encoded as palette UVs.
+  - Emits tileImageReady(product, z, x, y, image).
+
+  2. QImage → pending queue (OverlayItem::onTileImageReady)
+  - OverlayItem::onTileImageReady() (OverlayItem.cpp:142) receives the signal and stores the QImage in m_pendingImages[key], sets m_imageDirty = true, then calls update() to schedule a repaint.
+
+  3. QImage → QSGTexture (updatePaintNode)
+  - On the render thread, updatePaintNode() (OverlayItem.cpp:245–258) drains m_pendingImages: for each entry it calls window()->createTextureFromImage() to create a QSGTexture and stores it in TileGridRootNode::textures[key].
+  - The geometry nodes are then rebuilt (OverlayItem.cpp:270+), each FloatGridMaterial::texture is pointed at the relevant QSGTexture.
+
+  4. QSGTexture → GPU (FloatGridShader::updateSampledImage)
+  - The Qt scene graph renderer calls updateSampledImage(), which calls commitTextureOperations() to actually upload the pixel data to the GPU.
+
+  GridLoader (network)
+    → GridTileCache::onTileReady()       gridToImage() → QImage
+      → emit tileImageReady
+        → OverlayItem::onTileImageReady()  m_pendingImages[key] = image; update()
+          → updatePaintNode()              createTextureFromImage() → QSGTexture in root->textures
+            → FloatGridShader::updateSampledImage()  commitTextureOperations() → GPU
+
+
+----
+  Here is the call sequence:
+
+  1. QML engine flags the scene graph dirty (e.g., after QQuickItem::update() or a node geometry change).
+  2. The render thread runs a frame. The scene graph renderer walks every QSGGeometryNode that needs drawing.
+  3. For each node, the renderer calls QSGMaterialShader::updateUniformData() to upload the UBO (matrix, opacity, etc.) to the GPU.
+  4. For each sampler binding, it calls QSGMaterialShader::updateSampledImage() to bind the textures — this is where commitTextureOperations() is called to actually push the pixel data.
+
+  So the chain is:
+
+  QQuickItem::update()          ← you call this (main thread)
+    → scene graph marks dirty
+      → render thread frame
+        → FloatGridShader::updateUniformData()   ← Qt calls this
+        → FloatGridShader::updateSampledImage()  ← Qt calls this
+*/
 bool GridLoaderShader::updateUniformData(RenderState &state, QSGMaterial *newMat, QSGMaterial * /*oldMat*/) {
     auto *mat = static_cast<GridLoader *>(newMat);
     QByteArray *buf = state.uniformData();

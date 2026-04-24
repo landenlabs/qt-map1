@@ -23,6 +23,22 @@ FloatGridShader::FloatGridShader() {
     setShaderFileName(FragmentStage, QStringLiteral(":/shaders/shaders/floatgrid.frag.qsb"));
 }
 
+/*
+  Here is the call sequence:
+
+  1. QML engine flags the scene graph dirty (e.g., after QQuickItem::update() or a node geometry change).
+  2. The render thread runs a frame. The scene graph renderer walks every QSGGeometryNode that needs drawing.
+  3. For each node, the renderer calls QSGMaterialShader::updateUniformData() to upload the UBO (matrix, opacity, etc.) to the GPU.
+  4. For each sampler binding, it calls QSGMaterialShader::updateSampledImage() to bind the textures — this is where commitTextureOperations() is called to actually push the pixel data.
+
+  So the chain is:
+
+  QQuickItem::update()          ← you call this (main thread)
+    → scene graph marks dirty
+      → render thread frame
+        → FloatGridShader::updateUniformData()   ← Qt calls this
+        → FloatGridShader::updateSampledImage()  ← Qt calls this
+*/
 bool FloatGridShader::updateUniformData(RenderState &state, QSGMaterial * /*newMat*/, QSGMaterial * /*oldMat*/) {
     QByteArray *buf = state.uniformData();
     Q_ASSERT(buf->size() >= kUBOSize);
