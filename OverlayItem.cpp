@@ -195,19 +195,49 @@ void OverlayItem::setVisibleTiles(const QVariantList &tiles) {
         ti.z = m.value(QStringLiteral("z")).toInt();
         ti.x = m.value(QStringLiteral("x")).toInt();
         ti.y = m.value(QStringLiteral("y")).toInt();
-        m_tileInfos.append(ti);
 
         if (!m_product.isEmpty()) {
             if (ti.z <= m_maxLod) {
-                visibleKeys.insert(GridTileCache::tileKey(m_product, ti.z, ti.x, ti.y));
-                m_tileCache->requestTileImage(
-                        m_product, m_productType, m_urlInfo, m_urlData, m_paletteScale, m_paletteOffset, m_paletteNumSteps, ti.z, ti.x, ti.y
-                );
-            } else if (!m_pendingImages.contains(kTestKey)) {
+                // Direct tile: use the full texture.
+                ti.texZ = ti.z;  ti.texX = ti.x;  ti.texY = ti.y;
+                ti.uvRect = QRectF(0.0, 0.0, 1.0, 1.0);
+            } else {
+                // Display zoom exceeds maxLod: fetch the ancestor tile at
+                // maxLod and compute a UV sub-rect that selects only the
+                // portion of that ancestor covering this child tile.
+                //
+                //   diff  = z - maxLod       (e.g. 2 at z=4, maxLod=2)
+                //   scale = 2^diff           (4 child tiles per ancestor side)
+                //   texX  = x >> diff        (ancestor column)
+                //   texY  = y >> diff        (ancestor row)
+                //   uvRect origin = ((x % scale)/scale, (y % scale)/scale)
+                //   uvRect size   = (1/scale, 1/scale)
+                const int diff  = ti.z - m_maxLod;
+                const int scale = 1 << diff;
+                ti.texZ = m_maxLod;
+                ti.texX = ti.x >> diff;
+                ti.texY = ti.y >> diff;
+                const double step = 1.0 / scale;
+                ti.uvRect = QRectF((ti.x % scale) * step,
+                                   (ti.y % scale) * step,
+                                   step, step);
+            }
+            const QString key = GridTileCache::tileKey(m_product, ti.texZ, ti.texX, ti.texY);
+            visibleKeys.insert(key);
+            m_tileCache->requestTileImage(
+                    m_product, m_productType, m_urlInfo, m_urlData,
+                    m_paletteScale, m_paletteOffset, m_paletteNumSteps,
+                    ti.texZ, ti.texX, ti.texY);
+        } else {
+            ti.texZ = ti.z;  ti.texX = ti.x;  ti.texY = ti.y;
+            ti.uvRect = QRectF(0.0, 0.0, 1.0, 1.0);
+            if (!m_pendingImages.contains(kTestKey)) {
                 m_pendingImages[kTestKey] = makeTestGrid(256, 256);
                 m_imageDirty = true;
             }
         }
+
+        m_tileInfos.append(ti);
     }
 
     // Abort any in-flight tile fetches that have scrolled off-screen so they
@@ -314,7 +344,10 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         }
 
         for (const TileInfo &ti : std::as_const(m_tileInfos)) {
-            const QString key = m_product.isEmpty() ? kTestKey : GridTileCache::tileKey(m_product, ti.z, ti.x, ti.y);
+            // Look up by the texture tile (texZ/texX/texY), which may be an
+            // ancestor of the display tile when z > maxLod.
+            const QString key = m_product.isEmpty() ? kTestKey
+                              : GridTileCache::tileKey(m_product, ti.texZ, ti.texX, ti.texY);
 
             QSGTexture *tex = root->textures.value(key, nullptr);
             if (!tex)
@@ -327,13 +360,20 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
             const float x1 = float(ti.screenRect.right());
             const float y1 = float(ti.screenRect.bottom());
 
+            // UV sub-rect: full tile (0,0,1,1) for direct tiles; a fraction of
+            // the ancestor texture for tiles above maxLod.
+            const float u0 = float(ti.uvRect.left());
+            const float v0 = float(ti.uvRect.top());
+            const float u1 = float(ti.uvRect.right());
+            const float v1 = float(ti.uvRect.bottom());
+
             auto *geo = new QSGGeometry(QSGGeometry::defaultAttributes_TexturedPoint2D(), 4);
             geo->setDrawingMode(QSGGeometry::DrawTriangleStrip);
             QSGGeometry::TexturedPoint2D *vp = geo->vertexDataAsTexturedPoint2D();
-            vp[0].set(x0, y0, 0.f, 0.f);
-            vp[1].set(x1, y0, 1.f, 0.f);
-            vp[2].set(x0, y1, 0.f, 1.f);
-            vp[3].set(x1, y1, 1.f, 1.f);
+            vp[0].set(x0, y0, u0, v0);
+            vp[1].set(x1, y0, u1, v0);
+            vp[2].set(x0, y1, u0, v1);
+            vp[3].set(x1, y1, u1, v1);
 
             auto *mat = new FloatGridMaterial;
             mat->texture = tex;                         // non-owning

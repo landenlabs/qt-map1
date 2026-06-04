@@ -36,7 +36,12 @@ class OverlayItem : public QQuickItem
 public:
     struct TileInfo {
         QRectF screenRect;
-        int    z, x, y;
+        // UV sub-region within the texture tile.  Full tile = (0,0,1,1).
+        // When z > maxLod the ancestor tile is fetched and uvRect selects the
+        // child's portion of that ancestor texture.
+        QRectF uvRect   { 0.0, 0.0, 1.0, 1.0 };
+        int    z, x, y;                // display tile (logical zoom / col / row)
+        int    texZ = 0, texX = 0, texY = 0; // texture tile (= ancestor when z > maxLod)
     };
 
     explicit OverlayItem(QQuickItem *parent = nullptr);

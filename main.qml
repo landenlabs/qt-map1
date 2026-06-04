@@ -39,6 +39,7 @@ ApplicationWindow {
     // Shared helpers
     // -----------------------------------------------------------------------
 
+    // EPSG:3857
     // Web Mercator: tile row index → latitude (degrees)
     function tileToLat(ty, z) {
         return Math.atan(Math.sinh(Math.PI * (1.0 - 2.0 * ty / Math.pow(2, z))))
