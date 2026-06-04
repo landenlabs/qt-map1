@@ -125,5 +125,6 @@ QImage PaletteManager::buildImage(const QJsonArray &steps, int resolution) {
         line[i * 4 + 3] = clamp01(lerp(parsed[lo].a, parsed[hi].a));
     }
 
+    qInfo("PaletteManager: buildImage  steps=%d", (int)steps.size());
     return img;
 }

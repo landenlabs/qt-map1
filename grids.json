@@ -18,7 +18,7 @@
             "utltm": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}"
         },
         {
-            "name": "GWave",
+            "name": "GWave2",
             "comment":"2415 - SignificantWaveHeight2m",
             "prodCode": "2415",
             "prodName": "SignificantWaveHeight2m",
@@ -27,9 +27,22 @@
             "maxLod": 3
         },
         {
-            "name": "GPress",
-            "prodCode": "1248",
-            "prodName": "Stuff"
+            "name": "GWave4",
+            "comment":"2415 - SignificantWaveHeight4m",
+            "prodCode": "2415",
+            "prodName": "SignificantWaveHeight4m",
+            "urldata":"https://api.weather.com/v2/tiler/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
+            "paletteName": "GProb",
+            "maxLod": 3
+        },
+        {
+            "name": "GWave8",
+            "comment":"2415 - SignificantWaveHeight8m",
+            "prodCode": "2415",
+            "prodName": "SignificantWaveHeight8m",
+            "urldata":"https://api.weather.com/v2/tiler/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
+            "paletteName": "GProb",
+            "maxLod": 3
         },
         {
             "name": "GTest",

@@ -11,6 +11,9 @@
 #include <algorithm>
 #include <cmath>
 
+// Debug
+#include <iostream>
+
 // ─── Construction ─────────────────────────────────────────────────────────────
 
 GridTileCache::GridTileCache(const QString &apiKey, qsizetype maxMemBytes, QObject *parent)
@@ -207,6 +210,9 @@ QImage GridTileCache::gridToImage(const QVector<QVector<float>> &grid, float pal
                 const float idx = (v - paletteOffset) * paletteScale;
                 const float uv = std::clamp(idx / stepRange, 0.0f, 1.0f);
                 line[c] = static_cast<uchar>(uv * 255.0f + 0.5f);
+                if (v > 1) {
+                    // std::cout << "tile v=" << v << " uv=" << uv << std::endl;
+                }
             }
         }
     }

@@ -186,7 +186,7 @@ ApplicationWindow {
                 center: QtPositioning.coordinate(appSettings.lastCenterLat,
                                                  appSettings.lastCenterLon)
                 zoomLevel: 12
-                minimumZoomLevel: 2
+                minimumZoomLevel: 0
                 maximumZoomLevel: 19
 
                 // Pan via mouse/touch drag
