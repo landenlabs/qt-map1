@@ -77,21 +77,34 @@ ApplicationWindow {
         var tyMax = Math.min(n - 1, Math.floor((1.0 - Math.log(Math.tan(se.latitude * Math.PI / 180.0)
                             + 1.0 / Math.cos(se.latitude * Math.PI / 180.0)) / Math.PI) / 2.0 * n))
 
+        // Compute tile width in screen pixels from the camera center longitude.
+        // Using ±eps around the camera avoids the world-wrap ambiguity that
+        // hits fromCoordinate when lonL/lonR are near ±180: at LOD 2 the
+        // world (1024 px) is narrower than a typical viewport (1280 px), so
+        // Qt's fromCoordinate snaps lonL and lonR of the same tile to
+        // different world instances as you pan, producing negative-width rects
+        // and badly overlapping quads.
+        var eps = Math.min(45, 180.0 / n)
+        var pL = map.fromCoordinate(QtPositioning.coordinate(0, map.center.longitude - eps), false)
+        var pR = map.fromCoordinate(QtPositioning.coordinate(0, map.center.longitude + eps), false)
+        var tileWidthPx = (pR.x - pL.x) / (2 * eps) * (360.0 / n)
+
         var tiles = []
         for (var tx = txMin; tx <= txMax; tx++) {
             for (var ty = tyMin; ty <= tyMax; ty++) {
-                var lonL = tx       / n * 360.0 - 180.0
-                var lonR = (tx + 1) / n * 360.0 - 180.0
+                // Use the tile CENTER longitude — always ±45/90/135°, never ±180,
+                // so fromCoordinate returns a consistent world instance.
+                var lonCtr = (tx + 0.5) / n * 360.0 - 180.0
                 var latT = tileToLat(ty,     z)
                 var latB = tileToLat(ty + 1, z)
 
-                var ptTL = map.fromCoordinate(QtPositioning.coordinate(latT, lonL), false)
-                var ptBR = map.fromCoordinate(QtPositioning.coordinate(latB, lonR), false)
+                var ptTop = map.fromCoordinate(QtPositioning.coordinate(latT, lonCtr), false)
+                var ptBot = map.fromCoordinate(QtPositioning.coordinate(latB, lonCtr), false)
 
                 tiles.push({
                     z: z, x: tx, y: ty,
-                    rect: Qt.rect(ptTL.x, ptTL.y,
-                                  ptBR.x - ptTL.x, ptBR.y - ptTL.y)
+                    rect: Qt.rect(ptTop.x - tileWidthPx / 2, ptTop.y,
+                                  tileWidthPx, ptBot.y - ptTop.y)
                 })
             }
         }

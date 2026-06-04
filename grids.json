@@ -23,7 +23,8 @@
             "prodCode": "2415",
             "prodName": "SignificantWaveHeight2m",
             "urldata":"https://api.weather.com/v2/tiler/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
-            "paletteName": "GProb"
+            "paletteName": "GProb",
+            "maxLod": 3
         },
         {
             "name": "GPress",
