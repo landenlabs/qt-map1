@@ -2,8 +2,11 @@
 #include "FloatGridMaterial.h"
 #include "GridLoader.h"
 #include "GridTileCache.h"
+#include "PhaseStats.h"
 
+#include <QElapsedTimer>
 #include <QQuickWindow>
+#include <QSet>
 #include <QSGGeometry>
 #include <QSGGeometryNode>
 #include <cmath>
@@ -182,6 +185,9 @@ void OverlayItem::setVisibleTiles(const QVariantList &tiles) {
     m_tileInfos.clear();
     m_tileInfos.reserve(tiles.size());
 
+    QSet<QString> visibleKeys;
+    visibleKeys.reserve(tiles.size());
+
     for (const QVariant &v : tiles) {
         const QVariantMap m = v.toMap();
         TileInfo ti;
@@ -193,6 +199,7 @@ void OverlayItem::setVisibleTiles(const QVariantList &tiles) {
 
         if (!m_product.isEmpty()) {
             if (ti.z <= m_maxLod) {
+                visibleKeys.insert(GridTileCache::tileKey(m_product, ti.z, ti.x, ti.y));
                 m_tileCache->requestTileImage(
                         m_product, m_productType, m_urlInfo, m_urlData, m_paletteScale, m_paletteOffset, m_paletteNumSteps, ti.z, ti.x, ti.y
                 );
@@ -202,6 +209,11 @@ void OverlayItem::setVisibleTiles(const QVariantList &tiles) {
             }
         }
     }
+
+    // Abort any in-flight tile fetches that have scrolled off-screen so they
+    // stop holding network connection slots.
+    if (!m_product.isEmpty())
+        m_tileCache->cancelOutsideOf(visibleKeys);
 
     m_rectsDirty = true;
     update();
@@ -274,7 +286,11 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     // ── Upload any pending data images to GPU textures ───────────────────────
     if (m_imageDirty) {
         for (auto it = m_pendingImages.cbegin(); it != m_pendingImages.cend(); ++it) {
-            QSGTexture *tex = window()->createTextureFromImage(it.value());
+            QSGTexture *tex = nullptr;
+            {
+                PhaseStats::Scope s("gpu_upload");
+                tex = window()->createTextureFromImage(it.value());
+            }
             tex->setFiltering(QSGTexture::Linear);
             tex->setHorizontalWrapMode(QSGTexture::ClampToEdge);
             tex->setVerticalWrapMode(QSGTexture::ClampToEdge);
@@ -335,6 +351,34 @@ QSGNode *OverlayItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     }
 
     return root;
+}
+
+// ─── setGridDiskCacheEnabled ──────────────────────────────────────────────────
+
+void OverlayItem::setGridDiskCacheEnabled(bool on) {
+    if (m_tileCache)
+        m_tileCache->setDiskCacheEnabled(on);
+}
+
+// ─── clearGridMemoryCache ─────────────────────────────────────────────────────
+
+void OverlayItem::clearGridMemoryCache() {
+    if (m_tileCache)
+        m_tileCache->clearMemoryCache();
+}
+
+void OverlayItem::clearGridDiskCache() {
+    if (m_tileCache)
+        m_tileCache->clearDiskCache();
+}
+
+int OverlayItem::gridMemoryCacheCount() const {
+    return m_tileCache ? m_tileCache->memoryCacheCount() : 0;
+}
+
+void OverlayItem::setTileLoadOnly(bool on) {
+    if (m_tileCache)
+        m_tileCache->setLoadOnly(on);
 }
 
 // ─── reloadPalettes ───────────────────────────────────────────────────────────

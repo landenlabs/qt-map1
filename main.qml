@@ -53,10 +53,25 @@ ApplicationWindow {
 
         var nw = map.toCoordinate(Qt.point(0,         0),          false)
         var se = map.toCoordinate(Qt.point(map.width, map.height), false)
-        if (!nw.isValid || !se.isValid) return
+        if (!nw.isValid || !se.isValid) {
+            appLogger.append("updateOverlayTiles z=" + z
+                + " zoom=" + map.zoomLevel.toFixed(2)
+                + " nw=" + (nw.isValid ? "OK" : "INVALID")
+                + " se=" + (se.isValid ? "OK" : "INVALID")
+                + " → early-exit")
+            return
+        }
 
-        var txMin = Math.max(0,     Math.floor((nw.longitude + 180.0) / 360.0 * n))
-        var txMax = Math.min(n - 1, Math.floor((se.longitude + 180.0) / 360.0 * n))
+        var txMin, txMax
+        if (se.longitude > nw.longitude) {
+            txMin = Math.max(0,     Math.floor((nw.longitude + 180.0) / 360.0 * n))
+            txMax = Math.min(n - 1, Math.floor((se.longitude + 180.0) / 360.0 * n))
+        } else {
+            // Viewport spans the antimeridian (or covers the full world width
+            // at low zoom).  Request every tile column at this z.
+            txMin = 0
+            txMax = n - 1
+        }
         var tyMin = Math.max(0,     Math.floor((1.0 - Math.log(Math.tan(nw.latitude * Math.PI / 180.0)
                             + 1.0 / Math.cos(nw.latitude * Math.PI / 180.0)) / Math.PI) / 2.0 * n))
         var tyMax = Math.min(n - 1, Math.floor((1.0 - Math.log(Math.tan(se.latitude * Math.PI / 180.0)
@@ -80,6 +95,13 @@ ApplicationWindow {
                 })
             }
         }
+        appLogger.append("updateOverlayTiles z=" + z
+            + " zoom=" + map.zoomLevel.toFixed(2)
+            + " nw=" + nw.latitude.toFixed(2) + "," + nw.longitude.toFixed(2)
+            + " se=" + se.latitude.toFixed(2) + "," + se.longitude.toFixed(2)
+            + " tx=" + txMin + ".." + txMax
+            + " ty=" + tyMin + ".." + tyMax
+            + " count=" + tiles.length)
         overlay.setVisibleTiles(tiles)
     }
 
@@ -268,7 +290,7 @@ ApplicationWindow {
                                                QtPositioning.coordinate((latA + latB) * 0.5,
                                                                         (lonA + lonB) * 0.5), false)
                                 if (cPt.x > 0 && cPt.x < width && cPt.y > 0 && cPt.y < height) {
-                                    var label = z + "/" + lx + "/" + ly
+                                    var label =  "x=" + lx + " y=" + ly + " z=" + z
                                     var tw    = ctx.measureText(label).width
                                     ctx.fillText(label, cPt.x - tw * 0.5, cPt.y + 5)
                                 }
@@ -374,7 +396,11 @@ ApplicationWindow {
                     opacity: 0.75
                     visible: false
                     // Apply any search paths saved from a previous session.
-                    Component.onCompleted: overlay.reloadPalettes(appSettings.searchPaths)
+                    Component.onCompleted: {
+                        overlay.reloadPalettes(appSettings.searchPaths)
+                        overlay.setGridDiskCacheEnabled(appSettings.gridDiskCacheEnabled)
+                        overlay.setTileLoadOnly(appSettings.tileLoadOnly)
+                    }
                 }
 
                 // -------------------------------------------------------
@@ -641,11 +667,55 @@ ApplicationWindow {
                                 }
                                 spacing: 8
 
-                                Text {
+                                RowLayout {
                                     width: parent.width
-                                    font.pixelSize: 13
-                                    font.bold: true
-                                    text: "Tile Cache"
+                                    spacing: 8
+                                    Text {
+                                        font.pixelSize: 13
+                                        font.bold: true
+                                        text: "Tile Cache"
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                    CheckBox {
+                                        id: gridDiskCacheCheck
+                                        text: "Use grid float disk cache"
+                                        font.pixelSize: 12
+                                        checked: appSettings.gridDiskCacheEnabled
+                                        onToggled: {
+                                            appSettings.gridDiskCacheEnabled = checked
+                                            overlay.setGridDiskCacheEnabled(checked)
+                                        }
+                                    }
+                                }
+                                RowLayout {
+                                    width: parent.width
+                                    spacing: 8
+                                    Item { Layout.fillWidth: true }
+                                    CheckBox {
+                                        id: tileLoadOnlyCheck
+                                        text: "Tile load only (diagnostic)"
+                                        font.pixelSize: 12
+                                        checked: appSettings.tileLoadOnly
+                                        ToolTip.visible: hovered
+                                        ToolTip.text: "Skip float parsing, image encoding, disk save, and GPU upload — measures pure network throughput in PhaseStats."
+                                        onToggled: {
+                                            appSettings.tileLoadOnly = checked
+                                            overlay.setTileLoadOnly(checked)
+                                        }
+                                    }
+                                }
+                                RowLayout {
+                                    width: parent.width
+                                    spacing: 8
+                                    Item { Layout.fillWidth: true }
+                                    Button {
+                                        text: "Clear in-memory grid cache"
+                                        Layout.preferredHeight: 26
+                                        font.pixelSize: 11
+                                        ToolTip.visible: hovered
+                                        ToolTip.text: "Drop every cached grid tile from RAM. Next pan/zoom refetches from disk (if enabled) or the network."
+                                        onClicked: overlay.clearGridMemoryCache()
+                                    }
                                 }
                                 Text {
                                     width: parent.width
@@ -1565,12 +1635,79 @@ ApplicationWindow {
                         font.bold: true
                     }
 
-                    Button {
+                    Row {
                         anchors { right: parent.right; rightMargin: 6; verticalCenter: parent.verticalCenter }
-                        text: "Clear"
-                        height: 22
-                        font.pixelSize: 11
-                        onClicked: appLogger.clear()
+                        spacing: 8
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Grid Tile Cache:"
+                            color: "#aaaaaa"
+                            font.pixelSize: 12
+                            font.bold: true
+                        }
+
+                        CheckBox {
+                            id: logBarDiskCacheCheck
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Disk Cache"
+                            font.pixelSize: 11
+                            checked: appSettings.gridDiskCacheEnabled
+                            hoverEnabled: true
+                            ToolTip.visible: hovered
+                            ToolTip.delay: 400
+                            ToolTip.text: "When on, decoded grid tiles are saved to disk and reloaded on next session.\nWhen off, every cache miss must refetch from the network."
+                            onToggled: {
+                                appSettings.gridDiskCacheEnabled = checked
+                                overlay.setGridDiskCacheEnabled(checked)
+                            }
+                        }
+
+                        Text {
+                            id: cacheCountText
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Cached: " + overlay.gridMemoryCacheCount()
+                            color: "#aaaaaa"
+                            font.pixelSize: 12
+                            font.family: "monospace"
+
+                            Timer {
+                                interval: 1000
+                                running: true
+                                repeat: true
+                                onTriggered: cacheCountText.text =
+                                    "Cached: " + overlay.gridMemoryCacheCount()
+                            }
+                        }
+
+                        Button {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Clear Cache"
+                            height: 22
+                            font.pixelSize: 11
+                            hoverEnabled: true
+                            ToolTip.visible: hovered
+                            ToolTip.delay: 400
+                            ToolTip.text: "Drop the in-memory grid tile cache AND delete the on-disk cache.\nNext pan/zoom will refetch every visible tile from the network."
+                            onClicked: {
+                                overlay.clearGridMemoryCache()
+                                overlay.clearGridDiskCache()
+                                cacheCountText.text =
+                                    "Cached: " + overlay.gridMemoryCacheCount()
+                            }
+                        }
+
+                        Button {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Clear Log"
+                            height: 22
+                            font.pixelSize: 11
+                            hoverEnabled: true
+                            ToolTip.visible: hovered
+                            ToolTip.delay: 400
+                            ToolTip.text: "Clear all messages from this log pane."
+                            onClicked: appLogger.clear()
+                        }
                     }
                 }
 

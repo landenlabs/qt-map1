@@ -1,6 +1,8 @@
 #include "GridLoader.h"
+#include "PhaseStats.h"
 
 #include <QDateTime>
+#include <QElapsedTimer>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -9,6 +11,7 @@
 #include <QUrlQuery>
 #include <QtEndian>
 #include <QtMath>
+#include <memory>
 
 // ─── UBO layout ──────────────────────────────────────────────────────────────
 // Must match shaders/floatgrid.vert and shaders/floatgrid.frag exactly.
@@ -118,11 +121,30 @@ void GridLoaderShader::updateSampledImage(RenderState &state, int binding, QSGTe
 }
 
 // ─── GridLoader ───────────────────────────────────────────────────────────────
+//  Worth saving to memory?
+// The "QNetworkAccessManager perf on the GUI thread will saturate at ~1 request/sec"
+// finding is exactly the kind of non-obvious Qt gotcha that's hard to rediscover.
+
 
 GridLoader::GridLoader(const QString &apiKey, QObject *parent)
     : QObject(parent)
     , m_apiKey(apiKey) {
     setFlag(Blending, true);
+
+    // Bypass QNAM's 6-connections-per-host cap by maintaining a pool.  Each
+    // QNetworkAccessManager has its own independent connection budget.
+    constexpr int kNetworkPoolSize = 4;
+    m_networks.reserve(kNetworkPoolSize);
+    for (int i = 0; i < kNetworkPoolSize; ++i)
+        m_networks.append(new QNetworkAccessManager(this));
+    qInfo("GridLoader: network pool size = %d  (×6 conn/host = %d concurrent)",
+          kNetworkPoolSize, kNetworkPoolSize * 6);
+}
+
+QNetworkAccessManager *GridLoader::nextNetwork() {
+    QNetworkAccessManager *n = m_networks[m_networkRR];
+    m_networkRR = (m_networkRR + 1) % m_networks.size();
+    return n;
 }
 
 QSGMaterialType *GridLoader::type() const {
@@ -157,7 +179,20 @@ void GridLoader::fetchTile(const QString &product, const QString &type, const QS
         return;
     }
 
-    // ── Cache miss: stage-1 info fetch ───────────────────────────────────────
+    // ── In-flight info GET for this product: queue and wait ───────────────────
+    // Without this, every tile in the first viewport burst sees an empty
+    // m_infoCache and fires its own stage-1 GET.  We want exactly one info
+    // GET per product per session.
+    auto qit = m_infoQueue.find(product);
+    if (qit != m_infoQueue.end()) {
+        qit.value().append(pending);
+        PhaseStats::instance().incr("info_coalesced");
+        return;
+    }
+
+    // ── First request for this product: start the queue and issue stage-1 ────
+    m_infoQueue.insert(product, QList<PendingTile>{pending});
+
     QUrlQuery query;
     query.addQueryItem(QStringLiteral("products"), product);
     query.addQueryItem(QStringLiteral("apiKey"), m_apiKey);
@@ -169,9 +204,12 @@ void GridLoader::fetchTile(const QString &product, const QString &type, const QS
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("qt-map1/1.0"));
     req.setRawHeader("Accept", "application/json");
+    req.setAttribute(QNetworkRequest::Http2AllowedAttribute, true);
 
-    QNetworkReply *reply = m_network.get(req);
-    connect(reply, &QNetworkReply::finished, this, [this, reply, pending]() {
+    QNetworkReply *reply = nextNetwork()->get(req);
+    QElapsedTimer timer; timer.start();
+    connect(reply, &QNetworkReply::finished, this, [this, reply, pending, timer]() {
+        PhaseStats::instance().record("info_fetch", timer.nsecsElapsed());
         handleInfoReply(reply, pending);
         reply->deleteLater();
     });
@@ -196,6 +234,12 @@ void GridLoader::fetchTile(const QString &product, const QString &type, const QS
 //   }
 
 void GridLoader::handleInfoReply(QNetworkReply *reply, const PendingTile &pending) {
+    // Take ownership of the queue.  The original `pending` is already in it.
+    // Any early-return below leaves m_infoQueue without an entry for this product,
+    // which is what we want — the cache's onTileError will fan failure out to all
+    // m_inFlight tiles for this product.
+    const QList<PendingTile> queued = m_infoQueue.take(pending.product);
+
     if (reply->error() != QNetworkReply::NoError) {
         emit tileError(pending.product, QStringLiteral("Info fetch failed: ") + reply->errorString());
         return;
@@ -265,11 +309,12 @@ void GridLoader::handleInfoReply(QNetworkReply *reply, const PendingTile &pendin
     // Mirrors: meta logging
     const QJsonObject meta = prodEntry.value(QStringLiteral("meta")).toObject();
     const QJsonObject attrs = meta.value(QStringLiteral("attributes")).toObject();
-    qInfo("GridLoader: info product=%s  rt=%s  t-count=%d  selected-t=%lld",
+    qInfo("GridLoader: info product=%s  rt=%s  t-count=%d  selected-t=%lld  queued=%lld",
           qPrintable(pending.product),
           qPrintable(rt),
           (int) tValues.size(),
-          static_cast<long long>(selectedT));
+          static_cast<long long>(selectedT),
+          static_cast<long long>(queued.size()));
     qInfo("  description=%s  dataType=%s  units=%s  missing=%s",
           qPrintable(meta.value(QStringLiteral("description")).toString()),
           qPrintable(meta.value(QStringLiteral("dataType")).toString()),
@@ -299,7 +344,10 @@ void GridLoader::handleInfoReply(QNetworkReply *reply, const PendingTile &pendin
         qInfo("  Web Mercator tileset not found in meta");
     }
 
-    startTileFetch(pending, rt, selectedT);
+    // Drain the queue: kick off stage-2 for every tile that was waiting on this
+    // product's info.  Including the original `pending` (it's already in queued).
+    for (const PendingTile &p : queued)
+        startTileFetch(p, rt, selectedT);
 }
 
 // ─── selectT ─────────────────────────────────────────────────────────────────
@@ -350,9 +398,57 @@ void GridLoader::startTileFetch(const PendingTile &pending, const QString &rt, q
     // Disable gzip: Qt adds Accept-Encoding:gzip by default, which would silently
     // corrupt the raw binary float4 payload and can cause a 406 response.
     tileReq.setRawHeader("Accept-Encoding", "identity");
+    // Allow HTTP/2 multiplexing where the server supports it — lifts the 6
+    // connections-per-host cap that otherwise serialises tile downloads.
+    tileReq.setAttribute(QNetworkRequest::Http2AllowedAttribute, true);
 
-    QNetworkReply *tileReply = m_network.get(tileReq);
-    connect(tileReply, &QNetworkReply::finished, this, [this, tileReply, pending]() {
+    QNetworkReply *tileReply = nextNetwork()->get(tileReq);
+
+    // Track the reply so we can abort it if the tile scrolls off-screen.
+    const QString key = pending.product + QLatin1Char(':')
+                      + QString::number(pending.z) + QLatin1Char(':')
+                      + QString::number(pending.x) + QLatin1Char(':')
+                      + QString::number(pending.y);
+    m_tileReplies.insert(key, tileReply);
+
+    // Log new concurrency peaks so we can see whether QNAM is actually using
+    // its 6 connections-per-host budget.
+    {
+        static int sPeak = 0;
+        const int inflight = m_tileReplies.size();
+        if (inflight > sPeak) {
+            sPeak = inflight;
+            qInfo("GridLoader: new peak concurrent tile fetches = %d", inflight);
+        }
+    }
+
+    // Per-reply timing state.  shared_ptr so metaDataChanged and finished
+    // lambdas can both reach the same QElapsedTimer + first-byte marker.
+    struct ReplyTiming {
+        QElapsedTimer timer;
+        qint64        firstByteNs = -1;
+    };
+    auto timing = std::make_shared<ReplyTiming>();
+    timing->timer.start();
+
+    connect(tileReply, &QNetworkReply::metaDataChanged, this, [timing]() {
+        if (timing->firstByteNs < 0)
+            timing->firstByteNs = timing->timer.nsecsElapsed();
+    });
+
+    connect(tileReply, &QNetworkReply::finished, this, [this, tileReply, pending, timing, key]() {
+        const qint64 totalNs = timing->timer.nsecsElapsed();
+        PhaseStats::instance().record("tile_network", totalNs);
+        if (timing->firstByteNs >= 0) {
+            PhaseStats::instance().record("tile_queue", timing->firstByteNs);
+            PhaseStats::instance().record("tile_body",  totalNs - timing->firstByteNs);
+        }
+
+        // Which HTTP version did we actually negotiate?
+        const bool h2 = tileReply->attribute(QNetworkRequest::Http2WasUsedAttribute).toBool();
+        PhaseStats::instance().incr(h2 ? "proto_h2" : "proto_h1");
+
+        m_tileReplies.remove(key);
         handleTileReply(tileReply, pending);
         tileReply->deleteLater();
     });
@@ -366,6 +462,13 @@ void GridLoader::startTileFetch(const PendingTile &pending, const QString &rt, q
 // at the bottom of fetch_tile().
 
 void GridLoader::handleTileReply(QNetworkReply *reply, const PendingTile &pending) {
+    // Aborted by cancelTile() — silent, no error fan-out.  The cache already
+    // removed this key from m_inFlight before requesting cancellation.
+    if (reply->error() == QNetworkReply::OperationCanceledError) {
+        PhaseStats::instance().incr("tile_canceled");
+        return;
+    }
+
     if (reply->error() != QNetworkReply::NoError) {
         emit tileError(pending.product, QStringLiteral("Tile fetch failed: ") + reply->errorString());
         return;
@@ -385,12 +488,24 @@ void GridLoader::handleTileReply(QNetworkReply *reply, const PendingTile &pendin
 
     qInfo("GridLoader: tile %d,%d,%d — %d bytes received", pending.x, pending.y, pending.z, (int) data.size());
 
+    // Diagnostic load-only mode: skip parseFloat4 and emit an empty grid.
+    // GridTileCache::onTileReady is responsible for cleanup in this mode.
+    if (m_loadOnly) {
+        PhaseStats::instance().incr("load_only_skip");
+        emit tileReady(pending.product, pending.x, pending.y, pending.z, QVector<QVector<float>>());
+        return;
+    }
+
     // Mirrors: data_type, byte_order = type.split(':', 1)
     //          if data_type == 'float4': …
     const QString dataType = pending.type.section(QLatin1Char(':'), 0, 0);
 
     if (dataType == QLatin1String("float4")) {
-        const QVector<QVector<float>> grid = parseFloat4(data);
+        QVector<QVector<float>> grid;
+        {
+            PhaseStats::Scope s("parse_float4");
+            grid = parseFloat4(data);
+        }
         emit tileReady(pending.product, pending.x, pending.y, pending.z, grid);
     } else {
         emit tileError(pending.product, QStringLiteral("Unsupported type '") + dataType + QLatin1Char('\''));
@@ -403,6 +518,22 @@ void GridLoader::handleTileReply(QNetworkReply *reply, const PendingTile &pendin
 //   flat = struct.unpack(f'>{num_floats}f', tile_data)   # big-endian
 //   side = int(math.sqrt(num_floats))
 //   grid = [list(flat[row*side:(row+1)*side]) for row in range(side)]
+
+// ─── cancelTile ──────────────────────────────────────────────────────────────
+// Abort a stage-2 tile request if one is active for `key`.  Tiles still waiting
+// on stage-1 (queued in m_infoQueue) are left to complete — info is shared by
+// all tiles of a product and is cheap.
+
+void GridLoader::cancelTile(const QString &key) {
+    auto it = m_tileReplies.find(key);
+    if (it == m_tileReplies.end())
+        return;
+    QNetworkReply *r = it.value();
+    m_tileReplies.erase(it);
+    r->abort();  // → finished signal → handleTileReply (canceled branch) → deleteLater
+}
+
+// ─── parseFloat4 ─────────────────────────────────────────────────────────────
 
 QVector<QVector<float>> GridLoader::parseFloat4(const QByteArray &data) {
     const int numFloats = data.size() / 4;

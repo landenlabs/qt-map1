@@ -56,6 +56,23 @@ public:
 
     Q_INVOKABLE void setVisibleTiles(const QVariantList &tiles);
 
+    // Enable or disable disk caching of grid float tiles.  Memory cache is unaffected.
+    Q_INVOKABLE void setGridDiskCacheEnabled(bool on);
+
+    // Drop every entry from the in-memory tile QCache so subsequent requests
+    // fall through to disk (if enabled) or the network.
+    Q_INVOKABLE void clearGridMemoryCache();
+
+    // Delete every file under the on-disk grid tile cache directory.
+    Q_INVOKABLE void clearGridDiskCache();
+
+    // Current number of entries held in the in-memory grid tile cache.
+    Q_INVOKABLE int  gridMemoryCacheCount() const;
+
+    // Diagnostic: skip all post-network processing (parse, encode, save, upload)
+    // so PhaseStats reflects pure tile_network throughput.
+    Q_INVOKABLE void setTileLoadOnly(bool on);
+
     // Reload palettes from the built-in resource plus each search directory,
     // then re-apply the current palette if one is active.
     Q_INVOKABLE void reloadPalettes(const QStringList &searchPaths);

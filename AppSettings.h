@@ -44,6 +44,16 @@ class AppSettings : public QObject
                WRITE setTileUrl
                NOTIFY tileUrlChanged)
 
+    Q_PROPERTY(bool gridDiskCacheEnabled
+               READ  gridDiskCacheEnabled
+               WRITE setGridDiskCacheEnabled
+               NOTIFY gridDiskCacheEnabledChanged)
+
+    Q_PROPERTY(bool tileLoadOnly
+               READ  tileLoadOnly
+               WRITE setTileLoadOnly
+               NOTIFY tileLoadOnlyChanged)
+
     Q_PROPERTY(QString sunApiKey
                READ  sunApiKey
                WRITE setSunApiKey
@@ -82,6 +92,12 @@ public:
     QString tileUrl() const;
     void    setTileUrl(const QString &url);
 
+    bool    gridDiskCacheEnabled() const;
+    void    setGridDiskCacheEnabled(bool on);
+
+    bool    tileLoadOnly() const;
+    void    setTileLoadOnly(bool on);
+
     QString sunApiKey() const;
     void    setSunApiKey(const QString &key);
 
@@ -102,6 +118,8 @@ public:
 signals:
     void searchPathsChanged(const QStringList &paths);
     void tileUrlChanged(const QString &url);
+    void gridDiskCacheEnabledChanged(bool on);
+    void tileLoadOnlyChanged(bool on);
     void sunApiKeyChanged(const QString &key);
     void mapPinsChanged(const QString &json);
     void lastCenterChanged();
@@ -110,6 +128,8 @@ private:
     QSettings   m_settings;
     QStringList m_searchPaths;
     QString     m_tileUrl;
+    bool        m_gridDiskCacheEnabled = true;
+    bool        m_tileLoadOnly         = false;
     QString     m_sunApiKey;
 
     QString     m_mapPins;

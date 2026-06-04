@@ -10,6 +10,7 @@
 #include <QNetworkReply>
 #include <QString>
 #include <QVector>
+#include <atomic>
 
 // ─── GridLoaderShader ─────────────────────────────────────────────────────────
 //
@@ -83,9 +84,22 @@ public:
     //   urlInfo – info endpoint template (query string stripped internally)
     //   urlData – data endpoint template (query string stripped internally)
     //   x,y,z  – tile coordinates
+    // Diagnostic mode: skip parseFloat4 when reply arrives.  Used together with
+    // GridTileCache::setLoadOnly() to measure pure network throughput.
+    // Safe to call from any thread (m_loadOnly is atomic).
+    void setLoadOnly(bool on) { m_loadOnly = on; }
+
+public slots:
+    // These are public slots so GridTileCache can connect to them across a
+    // thread boundary (this object lives on a worker thread).
     void fetchTile(const QString &product, const QString &type,
                    const QString &urlInfo, const QString &urlData,
                    int x, int y, int z);
+
+    // Abort the in-flight stage-2 tile request for the given key, if any.
+    // key = GridTileCache::tileKey(product, z, x, y) = "product:z:x:y".
+    // Info-stage requests are not cancellable — they're cheap and shared.
+    void cancelTile(const QString &key);
 
 signals:
     // Emitted when the float grid is ready.
@@ -129,6 +143,25 @@ private:
     static QVector<QVector<float>> parseFloat4(const QByteArray &data);
 
     QString                     m_apiKey;
-    QNetworkAccessManager       m_network;
+
+    // Pool of QNetworkAccessManagers — each has its own 6-conn-per-host budget,
+    // so N QNAMs round-robin gives ~6N concurrent in-flight requests.  Sized
+    // to match the throughput of an external multi-threaded benchmark; HTTP/2
+    // multiplexing is unavailable (server is HTTP/1.1).
+    QVector<QNetworkAccessManager *> m_networks;
+    int                              m_networkRR = 0;
+    QNetworkAccessManager           *nextNetwork();
+
     QHash<QString, ProductInfo> m_infoCache;  // product → cached stage-1 data
+
+    // Per-product queue of tile requests waiting on an in-flight stage-1 info
+    // fetch.  When the info reply arrives, every queued tile is fired in one
+    // burst — ensuring exactly one info GET per product per session.
+    QHash<QString, QList<PendingTile>> m_infoQueue;
+
+    // Tile-stage replies indexed by GridTileCache::tileKey() so they can be
+    // aborted when the viewport scrolls them off-screen.
+    QHash<QString, QNetworkReply *>    m_tileReplies;
+
+    std::atomic<bool> m_loadOnly{false};  // diagnostic: skip parseFloat4 when set
 };

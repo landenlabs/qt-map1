@@ -64,6 +64,8 @@ qt_add_executable(qt-map1
     GridManager.cpp
     GridTileCache.h
     GridTileCache.cpp
+    PhaseStats.h
+    PhaseStats.cpp
     PaletteManager.h
     PaletteManager.cpp
     PinManager.h

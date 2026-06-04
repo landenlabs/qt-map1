@@ -18,14 +18,29 @@
             "utltm": "https://api.weather.com/v2/tiler/info?products={p}&apiKey={k}"
         },
         {
-            "name": "GWind",
-            "prodCode": "1248",
-            "prodName": "Foo"
+            "name": "GWave",
+            "comment":"2415 - SignificantWaveHeight2m",
+            "prodCode": "2415",
+            "prodName": "SignificantWaveHeight2m",
+            "urldata":"https://api.weather.com/v2/tiler/data?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
+            "paletteName": "GProb"
         },
         {
             "name": "GPress",
             "prodCode": "1248",
             "prodName": "Stuff"
+        },
+        {
+            "name": "GTest",
+            "prodCode": "1234",
+            "prodName": "Pattern",
+            "type": "float4",
+            "maxLod": 14,
+            "paletteName": "GTest",
+            "comment": "Local Test pattern - upto LOD 14",
+            "urldata": "http://localhost:8080/grid?products={p}&rt={rt}&t={t}&lod={z}&x={x}&y={y}&apiKey={k}",
+            "utltm": "http://localhost:8080/info?products={p}",
+            "urlinfo": "http://localhost:8080/info?products={p}"
         }
     ]
 }

@@ -11,6 +11,7 @@
 #include "LayerManager.h"
 #include "Logger.h"
 #include "OverlayItem.h"
+#include "PhaseStats.h"
 #include "PinManager.h"
 
 // ── Qt message handler ────────────────────────────────────────────────────────
@@ -105,5 +106,7 @@ int main(int argc, char *argv[]) {
     );
 
     engine.load(url);
-    return app.exec();
+    const int rc = app.exec();
+    PhaseStats::instance().dump();
+    return rc;
 }

@@ -9,6 +9,10 @@ AppSettings::AppSettings(const QString &builtinApiKey, int expiryDays, qint64 bu
 
     m_tileUrl = m_settings.value(QStringLiteral("tileUrl"), QStringLiteral(kDefaultTileUrl)).toString();
 
+    m_gridDiskCacheEnabled = m_settings.value(QStringLiteral("gridDiskCacheEnabled"), true).toBool();
+
+    m_tileLoadOnly = m_settings.value(QStringLiteral("tileLoadOnly"), false).toBool();
+
     m_sunApiKey = m_settings.value(QStringLiteral("sunApiKey")).toString();
 
     m_mapPins = m_settings.value(QStringLiteral("mapPins"), QStringLiteral("[]")).toString();
@@ -48,6 +52,34 @@ void AppSettings::setTileUrl(const QString &url) {
     m_tileUrl = url;
     m_settings.setValue(QStringLiteral("tileUrl"), url);
     emit tileUrlChanged(url);
+}
+
+// ─── gridDiskCacheEnabled ─────────────────────────────────────────────────────
+
+bool AppSettings::gridDiskCacheEnabled() const {
+    return m_gridDiskCacheEnabled;
+}
+
+void AppSettings::setGridDiskCacheEnabled(bool on) {
+    if (m_gridDiskCacheEnabled == on)
+        return;
+    m_gridDiskCacheEnabled = on;
+    m_settings.setValue(QStringLiteral("gridDiskCacheEnabled"), on);
+    emit gridDiskCacheEnabledChanged(on);
+}
+
+// ─── tileLoadOnly ─────────────────────────────────────────────────────────────
+
+bool AppSettings::tileLoadOnly() const {
+    return m_tileLoadOnly;
+}
+
+void AppSettings::setTileLoadOnly(bool on) {
+    if (m_tileLoadOnly == on)
+        return;
+    m_tileLoadOnly = on;
+    m_settings.setValue(QStringLiteral("tileLoadOnly"), on);
+    emit tileLoadOnlyChanged(on);
 }
 
 // ─── sunApiKey ────────────────────────────────────────────────────────────────

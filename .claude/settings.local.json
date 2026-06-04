@@ -36,7 +36,10 @@
       "Bash(find ~/Library/Application Support -name *qt-map*)",
       "Bash(find ~/Library -name qt-map1*)",
       "Read(//private/var/folders/**)",
-      "Bash(nm /Users/dennislang/opt/projects/qt-projects/qt-map1/build2/qt-map1)"
+      "Bash(nm /Users/dennislang/opt/projects/qt-projects/qt-map1/build2/qt-map1)",
+      "Bash(cmake --build .)",
+      "Bash(cmake --build /Users/dennislang/opt/projects/qt-projects/qt-map1/build/Qt_6_11_0_homebrew_31672b-Debug)",
+      "Bash(make -j8)"
     ]
   }
 }
